@@ -1,0 +1,49 @@
+{
+  "app": {
+    "products": [
+      {
+        "name": "default",
+        "signingConfig": "default",
+        "compatibleSdkVersion": "5.0.3(15)",
+        "runtimeOS": "HarmonyOS"
+      }
+    ],
+    "buildModeSet": [
+      {
+        "name": "debug"
+      },
+      {
+        "name": "release"
+      }
+    ],
+    "signingConfigs": [
+      {
+        "name": "default",
+        "type": "HarmonyOS",
+        "material": {
+          "certpath": "C:\\Users\\yuqiu\\.ohos\\config\\default_vhall_open_sdk_harmony_J-Sp4_bREs1aB5ygNiihoVqXvnfN1FLDYQ_ikteW5K4=.cer",
+          "keyAlias": "debugKey",
+          "keyPassword": "0000001B23292C506CABAE0DE8983C36491D0BC889D8C416A857EAB9773D98D7D6E84C92757F88DDFEE7B1",
+          "profile": "C:\\Users\\yuqiu\\.ohos\\config\\default_vhall_open_sdk_harmony_J-Sp4_bREs1aB5ygNiihoVqXvnfN1FLDYQ_ikteW5K4=.p7b",
+          "signAlg": "SHA256withECDSA",
+          "storeFile": "C:\\Users\\yuqiu\\.ohos\\config\\default_vhall_open_sdk_harmony_J-Sp4_bREs1aB5ygNiihoVqXvnfN1FLDYQ_ikteW5K4=.p12",
+          "storePassword": "0000001B88063B97830BE62F4C93155E985355EE2C9A2397A87943BB80531BE4E53E673DEDDB7F99084368"
+        }
+      }
+    ]
+  },
+  "modules": [
+    {
+      "name": "entry",
+      "srcPath": "./entry",
+      "targets": [
+        {
+          "name": "default",
+          "applyToProducts": [
+            "default"
+          ]
+        }
+      ]
+    }
+  ]
+}

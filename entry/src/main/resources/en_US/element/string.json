@@ -1,0 +1,100 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "module description"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "description"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "label"
+    },
+    {
+      "name": "start_play",
+      "value": "start play"
+    },
+    {
+      "name": "fill_mode",
+      "value": "Fill Mode"
+    },
+    {
+      "name": "aspectFit_mode",
+      "value": "AspectFit"
+    },
+    {
+      "name": "aspectFill",
+      "value": "AspectFill"
+    },
+    {
+      "name": "pause",
+      "value": "pause"
+    },
+    {
+      "name": "resume",
+      "value": "resume"
+    },
+    {
+      "name": "stop",
+      "value": "stop"
+    },
+    {
+      "name": "destory",
+      "value": "destory"
+    },
+    {
+      "name": "play_reset",
+      "value": "reset"
+    },
+    {
+      "name": "enable_water_mask",
+      "value": "EnableWaterMask"
+    },
+    {
+      "name": "disable_water_mask",
+      "value": "DisableWaterMask"
+    },
+    {
+      "name": "player_landspace",
+      "value": "LandSpace"
+    },
+    {
+      "name": "play_portrait",
+      "value": "Portrait"
+    },
+    {
+      "name": "play_url_error",
+      "value": "Play Url Error"
+    },
+    {
+      "name": "enter_vod_room",
+      "value": "Enter Vod Room"
+    },
+    {
+      "name": "play_vod_loop",
+      "value": "Loop"
+    },
+    {
+      "name": "water_url",
+      "value": "water url"
+    },
+    {
+      "name": "start_pip",
+      "value": "StartPiP"
+    },
+    {
+      "name": "stop_pip",
+      "value": "StopPip"
+    },
+    {
+      "name": "play_timeout",
+      "value": "PlayTimeout"
+    },
+    {
+      "name": "enter_doc_room",
+      "value": "enter_doc_room"
+    }
+  ]
+}

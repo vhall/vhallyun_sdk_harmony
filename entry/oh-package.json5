@@ -1,0 +1,15 @@
+{
+  "name": "entry",
+  "version": "1.0.0",
+  "description": "Please describe the basic information.",
+  "main": "",
+  "author": "",
+  "license": "",
+  "dependencies": {
+    "@vhall/vhallyun-framework": "1.0.17",
+    "@vhall/vhallyun-ims": "1.0.17",
+    "@vhall/vhallyun-lss-vod": "1.0.17",
+    "@vhall/vhallyun-doc": "1.0.17"
+  }
+}
+

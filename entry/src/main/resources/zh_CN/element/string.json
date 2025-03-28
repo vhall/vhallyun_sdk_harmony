@@ -1,0 +1,100 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "模块描述"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "description"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "鸿蒙SDK"
+    },
+    {
+      "name": "start_play",
+      "value": "播放"
+    },
+    {
+      "name": "fill_mode",
+      "value": "填充模式"
+    },
+    {
+      "name": "aspectFit_mode",
+      "value": "等比例缩放"
+    },
+    {
+      "name": "aspectFill",
+      "value": "等比裁剪"
+    },
+    {
+      "name": "pause",
+      "value": "暂停"
+    },
+    {
+      "name": "resume",
+      "value": "恢复"
+    },
+    {
+      "name": "stop",
+      "value": "停止"
+    },
+    {
+      "name": "destory",
+      "value": "退出直播"
+    },
+    {
+      "name": "play_reset",
+      "value": "重置"
+    },
+    {
+      "name": "enable_water_mask",
+      "value": "开启"
+    },
+    {
+      "name": "disable_water_mask",
+      "value": "关闭"
+    },
+    {
+      "name": "player_landspace",
+      "value": "横屏"
+    },
+    {
+      "name": "play_portrait",
+      "value": "竖屏"
+    },
+    {
+      "name": "play_url_error",
+      "value": "数据流异常信息. 播放地址信息错误"
+    },
+    {
+      "name": "enter_vod_room",
+      "value": "进入点播房间"
+    },
+    {
+      "name": "play_vod_loop",
+      "value": "循环播放"
+    },
+    {
+      "name": "water_url",
+      "value": "外部水印地址"
+    },
+    {
+      "name": "start_pip",
+      "value": "画中画"
+    },
+    {
+      "name": "stop_pip",
+      "value": "结束画中画"
+    },
+    {
+      "name": "play_timeout",
+      "value": "拉流超时"
+    },
+    {
+      "name": "enter_doc_room",
+      "value": "进入文档房间"
+    }
+  ]
+}
