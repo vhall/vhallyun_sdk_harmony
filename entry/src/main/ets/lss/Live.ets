@@ -1,21 +1,35 @@
-import { VHLivePlayer,
-  VHLivePlayerView, VHPlayerStatus, VHDefinition,
-  VHWaterMarkLocation,VHPlayerScalingMode,WaiterMaskPostion,
-  VHPlayStreamType,VHErrorCode,VHPlayerError,VHPlayerPipStatus } from '@vhall/vhallyun-lss-vod'
+import { VHLivePlayer, VHLivePlayerView, VHPlayerStatus, VHDefinition, VHWaterMarkLocation,
+  VHCastPlayState ,  VHPlayerScalingMode,
+  WaiterMaskPostion,
+  VHPlayStreamType,
+  VHErrorCode,
+  VHPlayerError,
+  VHPlayerPipStatus,
+  VHCastPlayMediaSource
+} from '@vhall/vhallyun-lss-vod'
 import { promptAction, router, window } from '@kit.ArkUI';
 import StyleConstants from '../common/constants/StyleConstants';
-import { logData } from '../common/constants/StyleConstants';
+import {logData} from '../common/constants/StyleConstants';
 import { BusinessError } from '@ohos.base';
 import { common } from '@kit.AbilityKit';
 import { photoAccessHelper } from '@kit.MediaLibraryKit';
 import fs from '@ohos.file.fs';
 import image from '@ohos.multimedia.image';
-import {VHDocument,VHDocumentView,VHDocumentViewModel,VHDocumentWaterMark,VHDocFilType} from '@vhall/vhallyun-doc';
+import {
+  VHDocFilType,
+  VHDocument,
+  VHDocumentView,
+  VHDocumentViewModel,
+  VHDocumentWaterMark
+} from '@vhall/vhallyun-doc';
+import { AVCastPicker, AVCastPickerState } from '@kit.AVSessionKit';
+import { TaskManager } from '../common/utils/TaskUitl';
+
 
 @Entry
 @Component
 struct Live {
-  livePlayerModel: VHLivePlayer = new VHLivePlayer();
+  livePlayerModel: VHLivePlayer = new VHLivePlayer(getContext(this));
   @State photoAccessHelper: photoAccessHelper.PhotoAccessHelper | undefined = undefined; // 相册模块管理实例
   @State livePlayCreate: boolean = false;
   // 获取上个界面传递过来的房间号
@@ -25,6 +39,7 @@ struct Live {
   public channel_id: string = this.params['channel_id'];
   public user_id:string = this.params['userid'];
   private isFirstShow: boolean = true;
+  @State isCasting :boolean = false;
   /**
    * 页面退到后台前获取播放状态，用于回到前台进行播放判断。
    * **/
@@ -59,8 +74,15 @@ struct Live {
   @State selectCid: string = '';
   @State showDoc: boolean = true;
   private logReport:object = [];
-
+  private source: VHCastPlayMediaSource |undefined = undefined;
   aboutToAppear(): void {
+    this.source = {
+      title:'我的回放',
+      name:'微吼直播',
+      description:'当前播放为回放视频',
+      headImage:$r("app.media.icon")
+    };
+    this.livePlayerModel.initCastPlay(this.source);
     this.livePlayerModel.setVHLivePlayerInterface(this);
     this.initScalingMode();
     this.document.setVHDocInterface(this);
@@ -106,6 +128,9 @@ struct Live {
 
   onPageHide(): void {
     this.playState = this.livePlayerModel.getPlayerState();
+    if(!this.isCasting){
+      this.livePlayerModel.pausePlay();
+    }
   }
 
   /**
@@ -156,6 +181,51 @@ struct Live {
    */
   docSelect(cid: string): void {
     this.selectCid = cid;
+  }
+
+  /**
+   * 投屏设备状体事件回调。
+   * @param state. 0 设备已准备好可以播放。1：设备已断开
+   */
+  onCastPlayDeviceState(state: number) {
+    this.isCasting = state == 0? true :false;
+    if(state == 0) {
+      TaskManager.startContinuousTask(getContext(this) as common.UIAbilityContext);
+    }else{
+      TaskManager.stopContinuousTask(getContext(this) as common.UIAbilityContext);
+
+    }
+  }
+  /**
+   * 投屏事件回调。
+   * @param state:VHCastPlayState
+   */
+  onCastPlayState(state: VHCastPlayState) {
+
+  }
+  /**
+   * 投屏播放时长。
+   * @param duration:number  播放总时长 ，单位ms
+   */
+  onCastPlayDuration(duration: number) {
+
+
+  }
+  /**
+   * 投屏播放当前位置。
+   * @param position:number  播放当前进度 ，单位ms
+   */
+  onCastPlayPosition(position: number) {
+
+
+  }
+
+  /**
+   * 投屏操作失败。
+   * @param state:VHCastPlayState。执行相关操作失败。包括开播、暂停、设置进度
+   */
+  onCastPlayError(state: VHCastPlayState) {
+
   }
 
   setTabSelectDocumentByCid(cid: string) {
@@ -460,6 +530,21 @@ struct Live {
 
   }
 
+  @Builder
+  componentBuilder() {
+    Image($r('app.media.icon'))
+      .width('40vp')
+      .height('40vp')
+  }
+
+  private onStateChange(state: AVCastPickerState) {
+    if (state == AVCastPickerState.STATE_APPEARING) {
+      console.log('The picker starts showing.');
+    } else if (state == AVCastPickerState.STATE_DISAPPEARING) {
+      console.log('The picker finishes presenting.');
+    }
+  }
+
   getDownLoadSpeed(speed: number): string {
     let strSpeed = '0 bp/s';
     if (speed < StyleConstants.PLAY_SPEED_BPS) { //
@@ -611,7 +696,7 @@ struct Live {
           value: this.isMute ? 0 : this.volume
         })
           .onChange((value: number, mode: SliderChangeMode) => {
-            this.livePlayerModel.setPlayVolume(value);
+            this.livePlayerModel.setPlayerVolume(value);
 
           })
         Button(this.muteText).onClick(() => {
@@ -682,6 +767,8 @@ struct Live {
             .height(this.playLandSpaceMode ? StyleConstants.FULL_HEIGHT : StyleConstants.VH_PLAYER_NORMAL_HEIGHT)
             .backgroundColor(Color.Black)
             .align(Alignment.Center)
+            .zIndex(1)
+
           Row(){
             Button($r('app.string.player_landspace')).onClick(() => {
               let windowStage: window.WindowStage = AppStorage.get('windowStage') as window.WindowStage;
@@ -693,7 +780,38 @@ struct Live {
               windowStage.getMainWindowSync().setPreferredOrientation(window.Orientation.PORTRAIT);
               this.playLandSpaceMode = false;
             })
+            AVCastPicker({
+              customPicker : this.componentBuilder,
+              normalColor: Color.Black,
+              onStateChange: this.onStateChange
+            })
+              .width('40vp')
+              .height('40vp')
           }.align(Alignment.TopEnd)
+          .zIndex(2)
+
+          Column() {
+            Row() {
+              Button("停止投屏")
+                .fontColor(Color.White)
+                .backgroundColor('#333333')
+                .onClick(() => {
+                  this.livePlayerModel.StopCastPlay();
+                })
+                .margin({
+                  left: '12vp',
+                  right: '12vp'
+                })
+            }
+            .justifyContent(FlexAlign.Center)
+            .width('100%')
+            .zIndex(this.isCasting ? 3 : 0)
+          }
+          .justifyContent(FlexAlign.Center)
+          .backgroundColor(Color.Black)
+          .width(StyleConstants.FULL_WIDTH)
+          .height(this.playLandSpaceMode ? StyleConstants.FULL_HEIGHT : StyleConstants.VH_PLAYER_NORMAL_HEIGHT)
+          .zIndex(this.isCasting ? 3 : 0)
         }
         this.documentViewBuilder();
         this.VHLivePlayCtl();

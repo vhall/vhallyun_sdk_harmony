@@ -1,32 +1,39 @@
-import { VHVodPlayer, VHVodPlayerView, VHPlayerStatus, VHDefinition } from '@vhall/vhallyun-lss-vod'
-import { promptAction, router, window } from '@kit.ArkUI';
-import StyleConstants from '../common/constants/StyleConstants';
-import {logData} from '../common/constants/StyleConstants';
-
-import {
-  VHPlayerScalingMode,
+import { VHVodPlayer, VHVodPlayerView, VHPlayerStatus, VHDefinition, VHCastPlayState,
+  VHCastPlayMediaSource,  VHPlayerScalingMode,
   WaiterMaskPostion,
   VHPlayerPipStatus,
   VHPlayStreamType,
   VHErrorCode,
   VHPlayerError,
   VHVodPlayerSpeed,
-  VHWaterMarkLocation
-} from '@vhall/vhallyun-lss-vod';
+  VHWaterMarkLocation } from '@vhall/vhallyun-lss-vod'
+import { promptAction, router, window } from '@kit.ArkUI';
+import StyleConstants from '../common/constants/StyleConstants';
+import {logData} from '../common/constants/StyleConstants';
 import { BusinessError } from '@ohos.base';
-import { common } from '@kit.AbilityKit';
+import { common, wantAgent } from '@kit.AbilityKit';
 import { photoAccessHelper } from '@kit.MediaLibraryKit';
 import fs from '@ohos.file.fs';
 
 import image from '@ohos.multimedia.image';
-import { VHDocument,VHDocumentView,VHDocumentViewModel,VHDocumentWaterMark,VHDocFilType} from '@vhall/vhallyun-doc';
-import { Logger } from '@vhall/vhallyun-framework';
+import {
+  VHDocFilType,
+  VHDocument,
+  VHDocumentView,
+  VHDocumentViewModel,
+  VHDocumentWaterMark
+} from '@vhall/vhallyun-doc';
+
+import { AVCastPicker, AVCastPickerState } from '@kit.AVSessionKit';
+import { backgroundTaskManager } from '@kit.BackgroundTasksKit';
+import { TaskManager } from '../common/utils/TaskUitl';
+import { emitter } from '@kit.BasicServicesKit';
 
 
 @Entry
 @Component
 struct Vod {
-  vodPlayerModel: VHVodPlayer = new VHVodPlayer();
+  private vodPlayerModel: VHVodPlayer = new VHVodPlayer(getContext(this) as common.UIAbilityContext);
   @State photoAccessHelper: photoAccessHelper.PhotoAccessHelper | undefined = undefined; // 相册模块管理实例
   @State livePlayCreate: boolean = false;
   // 获取上个界面传递过来的房间号
@@ -54,6 +61,7 @@ struct Vod {
   @State currentDuration: number = 0;
   @State vhLiveDefText: string = '原画';
   @State vhLiveDefIndex: number = 0;
+  @State isCasting :boolean = false;
   /**
    * 清晰度列表
    */
@@ -71,6 +79,7 @@ struct Vod {
   private document: VHDocument = new VHDocument(new VHDocumentViewModel(VHDocFilType.Doc));
   private controller: TabsController = new TabsController()
   private docWaterMark: VHDocumentWaterMark = new VHDocumentWaterMark('hello world', 20);
+  private source: VHCastPlayMediaSource |undefined = undefined;
   @State waterMarkLocation: VHWaterMarkLocation = new VHWaterMarkLocation();
   @State speedSelect: Array<SelectOption> = [];
   @State speedText: string = '1.00倍';
@@ -81,8 +90,15 @@ struct Vod {
   @State volume: number = 1.0;
   @State currentDocumentIndex: number = 0;
   private logReport:object = [];
-
   aboutToAppear(): void {
+    this.source = {
+      title:'我的回放',
+      name:'微吼直播',
+      description:'当前播放为回放视频',
+      headImage:$r("app.media.icon")
+    };
+    //初始化投屏后，会创建媒体会话绑定播控服务。如果不使用投屏功能不要进行初始化。
+    this.vodPlayerModel.initCastPlay(this.source);
     this.vodPlayerModel.setVHLivePlayerInterface(this, this);
     this.initSpeed();
     this.initScalingMode();
@@ -127,6 +143,10 @@ struct Vod {
 
   onPageHide(): void {
     this.playState = this.vodPlayerModel.getPlayerState();
+    //判断是否需要继续进行播放。如果没有投屏则暂停播放
+    if(!this.isCasting){
+      this.vodPlayerModel.pausePlay();
+    }
   }
 
   /**
@@ -223,9 +243,7 @@ struct Vod {
    */
   onVHPlayerViewLoaded() {
     // 初次进入调用播放
-    Logger.info('准备播放 === 错误码');
     this.vodPlayerModel.startPlay(this.record_id, this.access_token,this.logReport);
-    console.error('onVHPlayerViewLoaded %s  token %s',this.record_id,this.access_token);
   }
 
   /**
@@ -571,6 +589,64 @@ struct Vod {
 
   }
 
+  /**
+   * 投屏设备状体事件回调。
+   * @param state. 0 设备已准备好可以播放。1：设备已断开
+   */
+  onCastPlayDeviceState(state: number) {
+    this.isCasting = state == 0? true :false;
+    if(state == 0) {
+     // TaskManager.startContinuousTask(getContext(this) as common.UIAbilityContext);
+    }else{
+      //TaskManager.stopContinuousTask(getContext(this) as common.UIAbilityContext);
+
+    }
+  }
+  /**
+   * 投屏事件回调。
+   * @param state:VHCastPlayState
+   */
+  onCastPlayState(state: VHCastPlayState) {
+
+
+  }
+  /**
+   * 投屏播放时长。
+   * @param duration:number  播放总时长 ，单位ms
+   */
+  onCastPlayDuration(duration: number){
+
+  }
+  /**
+   * 投屏播放当前位置。
+   * @param position:number  播放当前进度 ，单位ms
+   */
+  onCastPlayPosition(position: number) {
+    this.onVodCurrentDuration(position);
+
+  }
+
+  /**
+   * 投屏操作失败。
+   * @param state:VHCastPlayState。执行相关操作失败。包括开播、暂停、设置进度
+   */
+  onCastPlayError(state: VHCastPlayState) {
+
+  }
+
+  onStateChange(state: AVCastPickerState) {
+    if (state == AVCastPickerState.STATE_APPEARING) {
+      console.log('The picker starts showing.');
+      // 定义一个eventId为1的事件。
+      let event: emitter.InnerEvent = {
+        eventId: 1
+      };
+      emitter.emit(event);
+    } else if (state == AVCastPickerState.STATE_DISAPPEARING) {
+      console.log('The picker finishes presenting.');
+    }
+  }
+
   getDownLoadSpeed(speed: number): string {
     let strSpeed = '0 bp/s';
     if (speed < StyleConstants.PLAY_SPEED_BPS) { //
@@ -767,8 +843,14 @@ struct Vod {
       Text(this.currentTime).width(StyleConstants.PLAY_TIME);
       Slider({ step: 1, value: this.currentDuration })
         .onChange((value: number, mode: SliderChangeMode) => {
-          let seekTime = value * this.totalDuration / 100;
-          this.vodPlayerModel.setPlayerSeek(seekTime);
+          if( this.isCasting){
+            let seekTime = value * this.totalDuration / 100;
+            this.vodPlayerModel.SeekCastPlay(seekTime);
+          }
+          else{
+            let seekTime = value * this.totalDuration / 100;
+            this.vodPlayerModel.setPlayerSeek(seekTime);
+          }
         })
       Text(this.totalTime).width(StyleConstants.PLAY_TIME);
       Text('循环').width(StyleConstants.PLAY_LOOP_TEXT_WIDHT);
@@ -776,6 +858,13 @@ struct Vod {
         this.vodPlayerModel.setPlayLoop(value);
       })
     }
+  }
+
+  @Builder
+  componentBuilder() {
+    Image($r('app.media.icon'))
+      .width('40vp')
+      .height('40vp')
   }
 
   @Builder
@@ -824,6 +913,7 @@ struct Vod {
             .height(this.playLandSpaceMode ? StyleConstants.FULL_HEIGHT : StyleConstants.VH_PLAYER_NORMAL_HEIGHT)
             .backgroundColor(Color.Black)
             .align(Alignment.Center)
+            .zIndex(1)
           Row(){
             Button($r('app.string.player_landspace')).onClick(() => {
               let windowStage: window.WindowStage = AppStorage.get('windowStage') as window.WindowStage;
@@ -835,7 +925,37 @@ struct Vod {
               windowStage.getMainWindowSync().setPreferredOrientation(window.Orientation.PORTRAIT);
               this.playLandSpaceMode = false;
             })
-          }.align(Alignment.TopEnd)
+
+            AVCastPicker({
+              customPicker : this.componentBuilder,
+              normalColor: Color.Black,
+              onStateChange: this.onStateChange
+            })
+              .width('40vp')
+              .height('40vp')
+          }.zIndex(2)
+
+          Column() {
+            Row() {
+              Button("停止投屏")
+                .fontColor(Color.White)
+                .backgroundColor('#333333')
+                .onClick(() => {
+                  this.vodPlayerModel.StopCastPlay();
+                })
+                .margin({
+                  left: '12vp',
+                  right: '12vp'
+                })
+            }
+            .justifyContent(FlexAlign.Center)
+            .width('100%')
+          }
+          .justifyContent(FlexAlign.Center)
+          .backgroundColor(Color.Black)
+          .width(StyleConstants.FULL_WIDTH)
+          .height(this.playLandSpaceMode ? StyleConstants.FULL_HEIGHT : StyleConstants.VH_PLAYER_NORMAL_HEIGHT)
+          .zIndex(this.isCasting ? 3 : 0)
         }
         this.documentViewBuilder();
         this.VHLivePlayCtl();
