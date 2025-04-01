@@ -10,24 +10,14 @@ struct Index {
   @State message: string = VHBase.getSDKVersion();
   @State appid: string = '15df4d3f';
   @State access_token: string = 'vhall';
-  //@State channel_id: string = 'ch_na5zaU6G';
-  //@State channel_id: string = 'ch_yzD7FeyM';
-  @State channel_id: string = 'ch_JEiMVGoQ';
-
-  //@State lss_id: string = 'lss_95216081';
-  // @State lss_id: string = 'lss_69a29f8f';
-  @State lss_id: string = 'lss_91050b4e';
-
-  // @State record_id: string = '4dca92af';
-  //@State record_id: string =  '7f108fea';
-  @State record_id: string = '829df412';
-  // @State userid: string = (Math.random() * 1000000000).toString().substring(0, 7);
-  @State userid: string = 'HarmonyOSChao';
-  @State nickName: string = '阿超';
+  @State channel_id: string = '';
+  @State lss_id: string = '';
+  @State record_id: string = '';
+  @State userid: string = 'vhall';
+  @State nickName: string = 'vhall';
   @State avatar: string = 'https://gw.alipayobjects.com/zos/antfincdn/XAosXuNZyF/BiazfanxmamNRoxxVxka.png';
   @State context: Map<string, string> = new Map<string,string>();
-
-
+  
   aboutToAppear(): void {
     // 初始化sdk
     VHBase.registerApp(this.appid, '',
