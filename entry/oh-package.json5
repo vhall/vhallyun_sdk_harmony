@@ -6,10 +6,10 @@
   "author": "",
   "license": "",
   "dependencies": {
-    "@vhall/vhallyun-framework": "1.0.20",
-    "@vhall/vhallyun-ims": "1.0.20",
-    "@vhall/vhallyun-lss-vod": "1.0.21",
-    "@vhall/vhallyun-doc": "1.0.20"
+    "@vhall/vhallyun-framework": "1.0.24",
+    "@vhall/vhallyun-ims": "1.0.24",
+    "@vhall/vhallyun-lss-vod": "1.0.24",
+    "@vhall/vhallyun-doc": "1.0.24"
   }
 }
 

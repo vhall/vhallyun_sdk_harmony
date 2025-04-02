@@ -17,7 +17,7 @@ struct Index {
   @State nickName: string = 'vhall';
   @State avatar: string = 'https://gw.alipayobjects.com/zos/antfincdn/XAosXuNZyF/BiazfanxmamNRoxxVxka.png';
   @State context: Map<string, string> = new Map<string,string>();
-  
+
   aboutToAppear(): void {
     // 初始化sdk
     VHBase.registerApp(this.appid, '',

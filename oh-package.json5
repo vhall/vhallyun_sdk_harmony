@@ -9,7 +9,7 @@
   "dependencies": {
     "framework": "^1.0.0",
     "@vhall/framework": "^1.0.3",
-    "@vhall/vhallyun-framework": "^1.0.17",
+    "@vhall/vhallyun-framework": "^1.0.24",
     "@vhall/vhallyun-doc": "^1.0.17",
     "@vhall/vhallyun-ims": "^1.0.16",
     "@vhall/vhallyun-lss-vod": "^1.0.21"
