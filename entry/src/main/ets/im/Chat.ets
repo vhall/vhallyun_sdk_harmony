@@ -326,7 +326,7 @@ struct Chat {
       });
       return;
     }
-    this.imBase.sendMessgae(msg,
+    this.imBase.sendMessage(msg,
       {
         onSuccess: () => {
           console.log('发送聊天消息成功 === ');

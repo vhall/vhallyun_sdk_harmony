@@ -1,5 +1,5 @@
 import { VHVodPlayer, VHVodPlayerView, VHPlayerStatus, VHDefinition, VHCastPlayState,
-  VHCastPlayMediaSource,  VHPlayerScalingMode,
+  VHCastPlayMediaSource,VHCastPlayDevice,  VHPlayerScalingMode,
   WaiterMaskPostion,
   VHPlayerPipStatus,
   VHPlayStreamType,
@@ -46,7 +46,7 @@ struct Vod {
   /**
    * 页面退到后台前获取播放状态，用于回到前台进行播放判断。
    * **/
-  private playState: VHPlayerStatus = VHPlayerStatus.Unkown;
+  private playState: VHPlayerStatus = VHPlayerStatus.INIT;
   //如果为文件操作方
   private isDocController:boolean = false;
   //是否显示文档
@@ -65,7 +65,7 @@ struct Vod {
   /**
    * 清晰度列表
    */
-  @State vhLiveDefoptions: Array<SelectOption> = [{ value: '原画' }];
+  @State vhLiveDefinition: Array<SelectOption> = [{ value: '原画' }];
   @State userWaterMarkUrl: string =
     'https://cnstatic01.e.vhall.com/upload/common/static-imgs/c0/e7/c0e7569408de296971eb4b98945c240b.png';
   private rePullStreamTimerId: number = 0;
@@ -76,7 +76,7 @@ struct Vod {
   @State selectCid: string = '';
   private selectDocument: number = 0;
   @State documentViews: Array<VHDocument> = new Array();
-  private document: VHDocument = new VHDocument(new VHDocumentViewModel(VHDocFilType.Doc));
+  private document: VHDocument = new VHDocument(new VHDocumentViewModel(VHDocFilType.DOC));
   private controller: TabsController = new TabsController()
   private docWaterMark: VHDocumentWaterMark = new VHDocumentWaterMark('hello world', 20);
   private source: VHCastPlayMediaSource |undefined = undefined;
@@ -135,7 +135,7 @@ struct Vod {
       this.isFirstShow = false;
     } else {
       //退到后台时如果播放器处于播放状态，将变为pause状态。重新进入进行恢复
-      if (this.playState == VHPlayerStatus.Playing) {
+      if (this.playState == VHPlayerStatus.PLAYING) {
         this.vodPlayerModel.resumePlay();
       }
     }
@@ -257,24 +257,24 @@ struct Vod {
     let modes: Array<VHPlayerScalingMode> = this.vodPlayerModel.getPlayerScalingMode()
     for (let i = 0; i < modes.length; i++) {
       let mode = modes[i];
-      if (mode == VHPlayerScalingMode.Fill) {
+      if (mode == VHPlayerScalingMode.FILL) {
         this.scalingArray.push({ value: StyleConstants.PLAY_Fill });
       }
-      if (mode == VHPlayerScalingMode.AspectFit) {
+      if (mode == VHPlayerScalingMode.ASPECT_FIT) {
         this.scalingArray.push({ value: StyleConstants.PLAY_AspectFit });
       }
-      if (mode == VHPlayerScalingMode.AspectFill) {
+      if (mode == VHPlayerScalingMode.ASPECT_FILL) {
         this.scalingArray.push({ value: StyleConstants.PLAY_AspectFill });
       }
-      if (this.vodPlayerModel.getCurrentScalingMode() == VHPlayerScalingMode.Fill) {
+      if (this.vodPlayerModel.getCurrentScalingMode() == VHPlayerScalingMode.FILL) {
         this.scalingIndex = 0;
         this.scalingText = StyleConstants.PLAY_Fill;
       }
-      if (this.vodPlayerModel.getCurrentScalingMode() == VHPlayerScalingMode.AspectFit) {
+      if (this.vodPlayerModel.getCurrentScalingMode() == VHPlayerScalingMode.ASPECT_FIT) {
         this.scalingIndex = 1;
         this.scalingText = StyleConstants.PLAY_AspectFit;
       }
-      if (this.vodPlayerModel.getCurrentScalingMode() == VHPlayerScalingMode.AspectFill) {
+      if (this.vodPlayerModel.getCurrentScalingMode() == VHPlayerScalingMode.ASPECT_FILL) {
         this.scalingIndex = 2;
         this.scalingText = StyleConstants.PLAY_AspectFill;
       }
@@ -422,7 +422,7 @@ struct Vod {
   onPlayerError(error: VHPlayerError) {
     let msg = '[code:' + error.code + ']:' + error.name + ' ';
     switch (error.code) {
-      case VHErrorCode.PlayUrlError:{
+      case VHErrorCode.PLAY_STREAM_FAILED:{
         clearInterval(this.rePullStreamTimerId);
         this.rePullStreamTimerId = setInterval(() => {
           this.vodPlayerModel.startPlay(this.record_id, this.access_token,this.logReport);
@@ -434,7 +434,7 @@ struct Vod {
         msg = msg + str;
         break;
       }
-      case VHErrorCode.PlayTimeout:{
+      case VHErrorCode.PLAY_TIMEOUT:{
         clearInterval(this.rePullStreamTimerId);
         this.rePullStreamTimerId = setInterval(() => {
           clearInterval(this.rePullStreamTimerId);
@@ -442,15 +442,15 @@ struct Vod {
         }, 2000);
         break;
       }
-      case VHErrorCode.NoDefinition:{
+      case VHErrorCode.PLAY_CURRENT_DEF_FAILED:{
         //如果没有当前清晰度调度，重新播放当前选中的清晰度
         let def = this.getPlayDefinition(this.vhLiveDefText);
         this.vodPlayerModel.changeDefinition(def);
         break;
       }
-      case VHErrorCode.DispatchUrlEmpty:
-      case VHErrorCode.PlayFormatError:
-      case VHErrorCode.NetworkError:{
+      case VHErrorCode.DISPATCH_URL_EMPTY:
+      case VHErrorCode.PLAY_FORMAT_ERROR:
+      case VHErrorCode.NETWORK_ERROR:{
         //如果没有播放调度地址或播放失败，需要应用层根据业务需求判断是否重新拉流。
         if(true){
           clearInterval(this.rePullStreamTimerId);
@@ -472,32 +472,32 @@ struct Vod {
   }
 
   onStatusDidChange(state: VHPlayerStatus) {
-    if (state == VHPlayerStatus.Playing) {
+    if (state == VHPlayerStatus.PLAYING) {
       promptAction.showToast({
         duration: StyleConstants.PLAY_ERROR_TIME,
         message: '开始播放'
       });
-    } else if (state == VHPlayerStatus.Pause) {
+    } else if (state == VHPlayerStatus.PAUSE) {
       promptAction.showToast({
         duration: StyleConstants.PLAY_ERROR_TIME,
         message: '已暂停播放'
       });
-    } else if (state == VHPlayerStatus.Stop) {
+    } else if (state == VHPlayerStatus.STOP) {
       promptAction.showToast({
         duration: StyleConstants.PLAY_ERROR_TIME,
         message: '已停止播放'
       });
-    } else if (state == VHPlayerStatus.Release) {
+    } else if (state == VHPlayerStatus.RELEASE) {
       promptAction.showToast({
         duration: StyleConstants.PLAY_ERROR_TIME,
         message: '播放器已释放'
       });
-    } else if (state == VHPlayerStatus.Complete) {
+    } else if (state == VHPlayerStatus.COMPLETE) {
       promptAction.showToast({
         duration: StyleConstants.PLAY_ERROR_TIME,
         message: '视频播放完毕'
       });
-    } else if (state == VHPlayerStatus.Loading) {
+    } else if (state == VHPlayerStatus.LOADING) {
       promptAction.showToast({
         duration: StyleConstants.PLAY_ERROR_TIME,
         message: '视频加载中'
@@ -522,9 +522,9 @@ struct Vod {
   }
 
   getPlayDefinition(text: string): VHDefinition {
-    let def: VHDefinition = VHDefinition.Origin;
+    let def: VHDefinition = VHDefinition.ORIGIN;
     if (text == '原画') {
-      def = VHDefinition.Origin;
+      def = VHDefinition.ORIGIN;
     } else if (text == '超高清') {
       def = VHDefinition.UHD;
     } else if (text == '高清') {
@@ -532,55 +532,55 @@ struct Vod {
     } else if (text == '标清') {
       def = VHDefinition.SD;
     } else if (text == '纯音频') {
-      def = VHDefinition.Audio;
+      def = VHDefinition.AUDIO;
     } else if (text == '裁剪分辨率') {
-      def = VHDefinition.NineSixteenCrop;
+      def = VHDefinition.CROP_MODE;
     } else if (text == '1080P') {
-      def = VHDefinition.TenEightyP;
+      def = VHDefinition.FULL_HD;
     }
     return def;
   }
 
   onValidDefinitions(definitions: VHDefinition[]) {
-    this.vhLiveDefoptions.splice(0, this.vhLiveDefoptions.length);
+    this.vhLiveDefinition.splice(0, this.vhLiveDefinition.length);
     for (let index = 0; index < definitions.length; index++) {
       const element: VHDefinition = definitions[index];
-      if (element == VHDefinition.Origin) {
-        if (this.vodPlayerModel.getCurDefinition() == VHDefinition.Origin) {
+      if (element == VHDefinition.ORIGIN) {
+        if (this.vodPlayerModel.getCurDefinition() == VHDefinition.ORIGIN) {
           this.vhLiveDefText = '原画';
         }
-        this.vhLiveDefoptions.push({ value: '原画' });
+        this.vhLiveDefinition.push({ value: '原画' });
       } else if (element == VHDefinition.UHD) {
         if (this.vodPlayerModel.getCurDefinition() == VHDefinition.UHD) {
           this.vhLiveDefText = '超高清';
         }
-        this.vhLiveDefoptions.push({ value: '超高清' });
+        this.vhLiveDefinition.push({ value: '超高清' });
       } else if (element == VHDefinition.HD) {
         if (this.vodPlayerModel.getCurDefinition() == VHDefinition.HD) {
           this.vhLiveDefText = '高清';
         }
-        this.vhLiveDefoptions.push({ value: '高清' });
+        this.vhLiveDefinition.push({ value: '高清' });
       } else if (element == VHDefinition.SD) {
         if (this.vodPlayerModel.getCurDefinition() == VHDefinition.SD) {
           this.vhLiveDefText = '标清';
         }
-        this.vhLiveDefoptions.push({ value: '标清' });
-      } else if (element == VHDefinition.Audio) {
-        if (this.vodPlayerModel.getCurDefinition() == VHDefinition.Audio) {
+        this.vhLiveDefinition.push({ value: '标清' });
+      } else if (element == VHDefinition.AUDIO) {
+        if (this.vodPlayerModel.getCurDefinition() == VHDefinition.AUDIO) {
           this.vhLiveDefText = '纯音频';
         }
-        this.vhLiveDefoptions.push({ value: '纯音频' });
-      } else if (element == VHDefinition.TenEightyP) {
-        if (this.vodPlayerModel.getCurDefinition() == VHDefinition.TenEightyP) {
+        this.vhLiveDefinition.push({ value: '纯音频' });
+      } else if (element == VHDefinition.FULL_HD) {
+        if (this.vodPlayerModel.getCurDefinition() == VHDefinition.FULL_HD) {
           this.vhLiveDefText = '1080P';
         }
-        this.vhLiveDefoptions.push({ value: '1080P' });
+        this.vhLiveDefinition.push({ value: '1080P' });
       }
     }
   }
 
   onStreamType(streamType: VHPlayStreamType) {
-    if (streamType == VHPlayStreamType.AVSteamType || streamType == VHPlayStreamType.AudioStreamType) {
+    if (streamType == VHPlayStreamType.AV_STREAM_TYPE || streamType == VHPlayStreamType.AUDIO_STREAM_TYPE) {
       this.hasAudio = true;
     }
   }
@@ -610,6 +610,11 @@ struct Vod {
 
 
   }
+
+  onCastPlayDeviceConnected(device: VHCastPlayDevice){
+
+  }
+
   /**
    * 投屏播放时长。
    * @param duration:number  播放总时长 ，单位ms
@@ -715,15 +720,15 @@ struct Vod {
             this.scalingText = text as string;
             this.scalingIndex = index;
             if (index == 0) {
-              this.vodPlayerModel.setPlayerScalingMode(VHPlayerScalingMode.Fill);
+              this.vodPlayerModel.setPlayerScalingMode(VHPlayerScalingMode.FILL);
             } else if (index == 1) {
-              this.vodPlayerModel.setPlayerScalingMode(VHPlayerScalingMode.AspectFit);
+              this.vodPlayerModel.setPlayerScalingMode(VHPlayerScalingMode.ASPECT_FIT);
             } else if (index == 2) {
-              this.vodPlayerModel.setPlayerScalingMode(VHPlayerScalingMode.AspectFill);
+              this.vodPlayerModel.setPlayerScalingMode(VHPlayerScalingMode.ASPECT_FILL);
             }
           }).value(this.scalingText).selected(this.scalingIndex)
 
-        Select(this.vhLiveDefoptions)
+        Select(this.vhLiveDefinition)
           .onSelect((index: number, text?: string | undefined) => {
             console.info('Select:' + index)
             this.vhLiveDefText = text as string;
@@ -867,6 +872,7 @@ struct Vod {
       .height('40vp')
   }
 
+
   @Builder
   documentViewBuilder() {
     Tabs({ barPosition: BarPosition.Start, controller: this.controller }) {
@@ -927,7 +933,7 @@ struct Vod {
             })
 
             AVCastPicker({
-              customPicker : this.componentBuilder,
+              customPicker: (): void => this.componentBuilder(),
               normalColor: Color.Black,
               onStateChange: this.onStateChange
             })

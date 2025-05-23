@@ -14,7 +14,8 @@ struct Doc {
   public access_token: string = this.params['access_token'];
 
   //需要用户根据业务自己生成docID
-  @State docId: string = 'cf191346';
+  @State docId: string = '6312efc7';
+ // @State docId: string = 'cf191346';
   // 动态更新tab中的VHDocumentView
   @State documentViews: Array<VHDocument> = new Array();
   //当前文档页
@@ -35,7 +36,7 @@ struct Doc {
   //是否开启涂鸦
   @State isDocPaint: boolean = false;
   //初始化文档对象，负责监听文档回调
-  private document: VHDocument = new VHDocument(new VHDocumentViewModel(VHDocFilType.Doc));
+  private document: VHDocument = new VHDocument(new VHDocumentViewModel(VHDocFilType.DOC));
   //如果是文档操作方
   @State isDocController:boolean = false;
   //文档是否显示可见状态
@@ -493,13 +494,14 @@ struct Doc {
             });
             return;
           }
-          let mode = new VHDocumentViewModel(VHDocFilType.Doc);
+          let mode = new VHDocumentViewModel(VHDocFilType.DOC);
           mode.docId = this.docId;
           mode.editEnable = this.isDocController;
           mode.docWidth = 720;
           mode.docHeight = 360;
           mode.backgroundColor = '#777777';
           let document: VHDocument = new VHDocument();
+          document.setVHDocInterface(this);
           //文档演示发起端主动创建需要调用此接口。
           document.initDemonstration(mode, this.access_token, this.lss_id, this.channel_id);
           this.insertDocumentItem(document);
@@ -509,13 +511,14 @@ struct Doc {
           .padding({ left: 2, right: 2 });
 
         Button('+白板').onClick(() => {
-          const mode = new VHDocumentViewModel(VHDocFilType.Board);
+          const mode = new VHDocumentViewModel(VHDocFilType.BOARD);
           mode.docId = this.docId;
           mode.editEnable = this.isDocController;
           mode.docWidth = 720;
           mode.docHeight = 360;
           mode.backgroundColor = '#ffffff';
           const document: VHDocument = new VHDocument();
+          document.setVHDocInterface(this);
           this.insertDocumentItem(document);
           document.initDemonstration(mode, this.access_token, this.lss_id, this.channel_id);
           this.selectCid = mode.cid;

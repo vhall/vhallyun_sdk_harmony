@@ -5,7 +5,8 @@ import { VHLivePlayer, VHLivePlayerView, VHPlayerStatus, VHDefinition, VHWaterMa
   VHErrorCode,
   VHPlayerError,
   VHPlayerPipStatus,
-  VHCastPlayMediaSource
+  VHCastPlayMediaSource,
+  VHCastPlayDevice
 } from '@vhall/vhallyun-lss-vod'
 import { promptAction, router, window } from '@kit.ArkUI';
 import StyleConstants from '../common/constants/StyleConstants';
@@ -24,6 +25,7 @@ import {
 } from '@vhall/vhallyun-doc';
 import { AVCastPicker, AVCastPickerState } from '@kit.AVSessionKit';
 import { TaskManager } from '../common/utils/TaskUitl';
+import { VHIM } from '@vhall/vhallyun-ims';
 
 
 @Entry
@@ -43,7 +45,7 @@ struct Live {
   /**
    * 页面退到后台前获取播放状态，用于回到前台进行播放判断。
    * **/
-  private playState: VHPlayerStatus = VHPlayerStatus.Unkown;
+  private playState: VHPlayerStatus = VHPlayerStatus.INIT;
   //文档水印参数
   private docWaterMark: VHDocumentWaterMark = new VHDocumentWaterMark('hello world', 20);
   //判断视频显示音频控件
@@ -56,8 +58,9 @@ struct Live {
   @State vhLiveDefText: string = '原画';
   @State vhLiveDef: Array<VHDefinition> = [];
   @State vhLiveDefIndex: number = 0;
+  private imBase: VHIM = new VHIM();
   //播放清晰度
-  @State vhLiveDefoptions: Array<SelectOption> = [{ value: '原画' }];
+  @State vhLiveDefinition: Array<SelectOption> = [{ value: '原画' }];
   @State waterMarkLocation: VHWaterMarkLocation = new VHWaterMarkLocation();
   private rePullStreamTimerId: number = 0;
   private selectDocument: number = 0;
@@ -69,7 +72,7 @@ struct Live {
   @State muteText: string = StyleConstants.PLAY_MUTE;
   @State volume: number = 1.0;
   @State documentViews: Array<VHDocument> = new Array();
-  private document: VHDocument = new VHDocument(new VHDocumentViewModel(VHDocFilType.Doc));
+  private document: VHDocument = new VHDocument(new VHDocumentViewModel(VHDocFilType.DOC));
   private controller: TabsController = new TabsController()
   @State selectCid: string = '';
   @State showDoc: boolean = true;
@@ -87,6 +90,7 @@ struct Live {
     this.initScalingMode();
     this.document.setVHDocInterface(this);
     //初始化直播文档，进行消息监听
+    this.imBase.init(this.channel_id, this.access_token);
     this.document.initLiveDoc(this.lss_id, this.channel_id, this.access_token, true)
     let context = getContext(this);
     window.getLastWindow(context)
@@ -108,6 +112,7 @@ struct Live {
   }
 
   aboutToDisappear(): void {
+    this.imBase.closeMsg();
     this.livePlayerModel.destroyPlayer();
     //释放文档
     this.document.destroyDoc();
@@ -120,7 +125,7 @@ struct Live {
       this.isFirstShow = false;
     } else {
       //退到后台时如果播放器处于播放状态，将变为pause状态。重新进入进行恢复
-      if (this.playState == VHPlayerStatus.Playing) {
+      if (this.playState == VHPlayerStatus.PLAYING) {
         this.livePlayerModel.resumePlay();
       }
     }
@@ -219,7 +224,9 @@ struct Live {
 
 
   }
+  onCastPlayDeviceConnected(device: VHCastPlayDevice){
 
+  }
   /**
    * 投屏操作失败。
    * @param state:VHCastPlayState。执行相关操作失败。包括开播、暂停、设置进度
@@ -227,6 +234,7 @@ struct Live {
   onCastPlayError(state: VHCastPlayState) {
 
   }
+
 
   setTabSelectDocumentByCid(cid: string) {
     for (let index = 0; index < this.documentViews.length; index++) {
@@ -295,24 +303,24 @@ struct Live {
     let modes: Array<VHPlayerScalingMode> = this.livePlayerModel.getPlayerScalingMode()
     for (let i = 0; i < modes.length; i++) {
       let mode = modes[i];
-      if (mode == VHPlayerScalingMode.Fill) {
+      if (mode == VHPlayerScalingMode.FILL) {
         this.scalingArray.push({ value: StyleConstants.PLAY_Fill });
       }
-      if (mode == VHPlayerScalingMode.AspectFit) {
+      if (mode == VHPlayerScalingMode.ASPECT_FIT) {
         this.scalingArray.push({ value: StyleConstants.PLAY_AspectFit });
       }
-      if (mode == VHPlayerScalingMode.AspectFill) {
+      if (mode == VHPlayerScalingMode.ASPECT_FILL) {
         this.scalingArray.push({ value: StyleConstants.PLAY_AspectFill });
       }
-      if (this.livePlayerModel.getCurrentScalingMode() == VHPlayerScalingMode.Fill) {
+      if (this.livePlayerModel.getCurrentScalingMode() == VHPlayerScalingMode.FILL) {
         this.scalingIndex = 0;
         this.scalingText = StyleConstants.PLAY_Fill;
       }
-      if (this.livePlayerModel.getCurrentScalingMode() == VHPlayerScalingMode.AspectFit) {
+      if (this.livePlayerModel.getCurrentScalingMode() == VHPlayerScalingMode.ASPECT_FIT) {
         this.scalingIndex = 1;
         this.scalingText = StyleConstants.PLAY_AspectFit;
       }
-      if (this.livePlayerModel.getCurrentScalingMode() == VHPlayerScalingMode.AspectFill) {
+      if (this.livePlayerModel.getCurrentScalingMode() == VHPlayerScalingMode.ASPECT_FILL) {
         this.scalingIndex = 2;
         this.scalingText = StyleConstants.PLAY_AspectFill;
       }
@@ -371,7 +379,7 @@ struct Live {
   onPlayerError(error: VHPlayerError) {
     let msg = '[code:' + error.code + ']:' + error.name + ' ';
     switch (error.code) {
-      case VHErrorCode.PlayUrlError:{
+      case VHErrorCode.PLAY_STREAM_FAILED:{
         clearInterval(this.rePullStreamTimerId);
         this.rePullStreamTimerId = setInterval(() => {
           this.livePlayerModel.startPlay(this.lss_id, this.access_token,this.logReport);
@@ -383,7 +391,7 @@ struct Live {
         msg = msg + str;
         break;
       }
-      case VHErrorCode.PlayTimeout:{
+      case VHErrorCode.PLAY_TIMEOUT:{
         clearInterval(this.rePullStreamTimerId);
         this.rePullStreamTimerId = setInterval(() => {
           this.livePlayerModel.startPlay(this.lss_id, this.access_token,this.logReport);
@@ -395,15 +403,15 @@ struct Live {
         msg = msg + strMsg;
         break;
       }
-      case VHErrorCode.NoDefinition:{
+      case VHErrorCode.PLAY_CURRENT_DEF_FAILED:{
         //如果没有当前清晰度调度，重新播放当前选中的清晰度
         let def = this.getPlayDefinition(this.vhLiveDefText);
         this.livePlayerModel.changeDefinition(def);
         break;
       }
-      case VHErrorCode.DispatchUrlEmpty:
-      case VHErrorCode.PlayFormatError:
-      case VHErrorCode.NetworkError:{
+      case VHErrorCode.DISPATCH_URL_EMPTY:
+      case VHErrorCode.PLAY_FORMAT_ERROR:
+      case VHErrorCode.NETWORK_ERROR:{
         //如果没有播放调度地址或播放失败，需要应用层根据业务需求判断是否重新拉流。
         if(true){
           clearInterval(this.rePullStreamTimerId);
@@ -425,17 +433,17 @@ struct Live {
   }
 
   onStatusDidChange(state: VHPlayerStatus) {
-    if (state == VHPlayerStatus.Playing) {
+    if (state == VHPlayerStatus.PLAYING) {
       promptAction.showToast({
         duration: StyleConstants.PLAY_ERROR_TIME,
         message: '开始播放'
       });
-    } else if (state == VHPlayerStatus.Pause) {
+    } else if (state == VHPlayerStatus.PAUSE) {
       promptAction.showToast({
         duration: StyleConstants.PLAY_ERROR_TIME,
         message: '已暂停播放'
       });
-    } else if (state == VHPlayerStatus.Complete) {
+    } else if (state == VHPlayerStatus.COMPLETE) {
       promptAction.showToast({
         duration: StyleConstants.PLAY_ERROR_TIME,
         message: '播放完毕'
@@ -444,17 +452,17 @@ struct Live {
       if(true){
         this.livePlayerModel.startPlay(this.lss_id, this.access_token,this.logReport);
       }
-    } else if (state == VHPlayerStatus.Stop) {
+    } else if (state == VHPlayerStatus.STOP) {
       promptAction.showToast({
         duration: StyleConstants.PLAY_ERROR_TIME,
         message: '已停止播放'
       });
-    } else if (state == VHPlayerStatus.Release) {
+    } else if (state == VHPlayerStatus.RELEASE) {
       promptAction.showToast({
         duration: StyleConstants.PLAY_ERROR_TIME,
         message: '播放器已释放'
       });
-    } else if (state == VHPlayerStatus.Loading) {
+    } else if (state == VHPlayerStatus.LOADING) {
       promptAction.showToast({
         duration: StyleConstants.PLAY_ERROR_TIME,
         message: '视频加载中'
@@ -463,9 +471,9 @@ struct Live {
   }
 
   getPlayDefinition(text: string): VHDefinition {
-    let def: VHDefinition = VHDefinition.Origin;
+    let def: VHDefinition = VHDefinition.ORIGIN;
     if (text == '原画') {
-      def = VHDefinition.Origin;
+      def = VHDefinition.ORIGIN;
     } else if (text == '超高清') {
       def = VHDefinition.UHD;
     } else if (text == '高清') {
@@ -473,55 +481,55 @@ struct Live {
     } else if (text == '标清') {
       def = VHDefinition.SD;
     } else if (text == '纯音频') {
-      def = VHDefinition.Audio;
+      def = VHDefinition.AUDIO;
     } else if (text == '裁剪分辨率') {
-      def = VHDefinition.NineSixteenCrop;
+      def = VHDefinition.CROP_MODE;
     } else if (text == '1080P') {
-      def = VHDefinition.TenEightyP;
+      def = VHDefinition.FULL_HD;
     }
     return def;
   }
 
   onValidDefinitions(definitions: VHDefinition[]) {
-    this.vhLiveDefoptions.splice(0, this.vhLiveDefoptions.length);
+    this.vhLiveDefinition.splice(0, this.vhLiveDefinition.length);
     for (let index = 0; index < definitions.length; index++) {
       const element: VHDefinition = definitions[index];
-      if (element == VHDefinition.Origin) {
-        if (this.livePlayerModel.getCurDefinition() == VHDefinition.Origin) {
+      if (element == VHDefinition.ORIGIN) {
+        if (this.livePlayerModel.getCurDefinition() == VHDefinition.ORIGIN) {
           this.vhLiveDefText = '原画';
         }
-        this.vhLiveDefoptions.push({ value: '原画' });
+        this.vhLiveDefinition.push({ value: '原画' });
       } else if (element == VHDefinition.UHD) {
         if (this.livePlayerModel.getCurDefinition() == VHDefinition.UHD) {
           this.vhLiveDefText = '超高清';
         }
-        this.vhLiveDefoptions.push({ value: '超高清' });
+        this.vhLiveDefinition.push({ value: '超高清' });
       } else if (element == VHDefinition.HD) {
         if (this.livePlayerModel.getCurDefinition() == VHDefinition.HD) {
           this.vhLiveDefText = '高清';
         }
-        this.vhLiveDefoptions.push({ value: '高清' });
+        this.vhLiveDefinition.push({ value: '高清' });
       } else if (element == VHDefinition.SD) {
         if (this.livePlayerModel.getCurDefinition() == VHDefinition.SD) {
           this.vhLiveDefText = '标清';
         }
-        this.vhLiveDefoptions.push({ value: '标清' });
-      } else if (element == VHDefinition.Audio) {
-        if (this.livePlayerModel.getCurDefinition() == VHDefinition.Audio) {
+        this.vhLiveDefinition.push({ value: '标清' });
+      } else if (element == VHDefinition.AUDIO) {
+        if (this.livePlayerModel.getCurDefinition() == VHDefinition.AUDIO) {
           this.vhLiveDefText = '纯音频';
         }
-        this.vhLiveDefoptions.push({ value: '纯音频' });
-      } else if (element == VHDefinition.TenEightyP) {
-        if (this.livePlayerModel.getCurDefinition() == VHDefinition.TenEightyP) {
+        this.vhLiveDefinition.push({ value: '纯音频' });
+      } else if (element == VHDefinition.FULL_HD) {
+        if (this.livePlayerModel.getCurDefinition() == VHDefinition.FULL_HD) {
           this.vhLiveDefText = '1080P';
         }
-        this.vhLiveDefoptions.push({ value: '1080P' });
+        this.vhLiveDefinition.push({ value: '1080P' });
       }
     }
   }
 
   onStreamType(streamType: VHPlayStreamType) {
-    if (streamType == VHPlayStreamType.AVSteamType || streamType == VHPlayStreamType.AudioStreamType) {
+    if (streamType == VHPlayStreamType.AV_STREAM_TYPE || streamType == VHPlayStreamType.AUDIO_STREAM_TYPE) {
       this.hasAudio = true;
     }
   }
@@ -597,15 +605,15 @@ struct Live {
             this.scalingText = text as string;
             this.scalingIndex = index;
             if (index == 0) {
-              this.livePlayerModel.setPlayerScalingMode(VHPlayerScalingMode.Fill);
+              this.livePlayerModel.setPlayerScalingMode(VHPlayerScalingMode.FILL);
             } else if (index == 1) {
-              this.livePlayerModel.setPlayerScalingMode(VHPlayerScalingMode.AspectFit);
+              this.livePlayerModel.setPlayerScalingMode(VHPlayerScalingMode.ASPECT_FIT);
             } else if (index == 2) {
-              this.livePlayerModel.setPlayerScalingMode(VHPlayerScalingMode.AspectFill);
+              this.livePlayerModel.setPlayerScalingMode(VHPlayerScalingMode.ASPECT_FILL);
             }
           }).value(this.scalingText).selected(this.scalingIndex)
 
-        Select(this.vhLiveDefoptions)
+        Select(this.vhLiveDefinition)
           .onSelect((index: number, text?: string | undefined) => {
             console.info('Select:' + index)
             this.vhLiveDefText = text as string;
@@ -728,13 +736,16 @@ struct Live {
     Tabs({ barPosition: BarPosition.Start, controller: this.controller }) {
       ForEach(this.documentViews, (doc: VHDocument, index: number) => {
         TabContent() {
-          VHDocumentView({ vhDocInterface: this, vhDocument: doc, demonstrateProgress: doc.documentViewModel.getLastData })
-            .width('100%')
-            .height('100%')
-            .onSizeChange((oldValue: SizeOptions, newValue: SizeOptions) => {
-              //添加到控件内，根据控件大小重置文档的渲染大小
-              doc.setDocumentViewSize(newValue.width as number, newValue.height as number);
-            })
+          if(this.showDoc == true){
+            VHDocumentView({ vhDocInterface: this, vhDocument: doc, demonstrateProgress: doc.documentViewModel.getLastData })
+              .width('100%')
+              .height('100%')
+              .onSizeChange((oldValue: SizeOptions, newValue: SizeOptions) => {
+                //添加到控件内，根据控件大小重置文档的渲染大小
+                doc.setDocumentViewSize(newValue.width as number, newValue.height as number);
+              })
+          }
+
         }.tabBar(this.tabBuilder(doc, index))
       }, (doc: VHDocument, index: number) => {
         //this.selectCid 发生改变时刷新文档当前页。
@@ -749,7 +760,7 @@ struct Live {
       })
     }
     .barHeight(0) //可通过设置此参数隐藏tab
-    .opacity(this.showDoc == true ? 100 : 0)//通过设置透明度来显示和隐藏
+    // .opacity(this.showDoc == true ? 100 : 0)//通过设置透明度来显示和隐藏
     .animationDuration(0)
     .backgroundColor('#ffd7ecb3')
     .height('30%')
@@ -781,7 +792,7 @@ struct Live {
               this.playLandSpaceMode = false;
             })
             AVCastPicker({
-              customPicker : this.componentBuilder,
+              customPicker: (): void => this.componentBuilder(),
               normalColor: Color.Black,
               onStateChange: this.onStateChange
             })

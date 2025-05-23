@@ -8,19 +8,24 @@ import StyleConstants from '../common/constants/StyleConstants';
 @Component
 struct Index {
   @State message: string = VHBase.getSDKVersion();
-  @State appid: string = '';
+  @State appid: string = '15df4d3f';
   @State access_token: string = '';
   @State channel_id: string = '';
+
   @State lss_id: string = '';
   @State record_id: string = '';
-  @State userid: string = 'vhall';
-  @State nickName: string = 'vhall';
-  @State avatar: string = 'https://gw.alipayobjects.com/zos/antfincdn/XAosXuNZyF/BiazfanxmamNRoxxVxka.png';
+  @State userid: string = 'HarmonyOS';
+  @State nickName: string = '';
+  @State packageName: string = '';
+  @State signature: string = '';
+  @State avatar: string = '';
   @State context: Map<string, string> = new Map<string,string>();
+
 
   aboutToAppear(): void {
     // 初始化sdk
-    VHBase.registerApp(this.appid, '',
+    VHBase.setPackageCheck(this.packageName,this.signature);
+    VHBase.registerApp(this.appid, 'api.vhallyun.com',
       {
         onSuccess: () => {
           console.log('SDK初始化成功');
