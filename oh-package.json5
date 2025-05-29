@@ -7,10 +7,10 @@
   "author": "",
   "license": "",
   "dependencies": {
-    "@vhall/vhallyun-framework": "^1.5.0",
-    "@vhall/vhallyun-doc": "^1.5.0",
-    "@vhall/vhallyun-ims": "^1.5.0",
-    "@vhall/vhallyun-lss-vod": "^1.5.0"
+    "@vhall/vhallyun-framework": "^1.7.0",
+    "@vhall/vhallyun-doc": "^1.7.0",
+    "@vhall/vhallyun-ims": "^1.7.0",
+    "@vhall/vhallyun-lss-vod": "^1.7.0"
   },
   "devDependencies": {
     "@ohos/hypium": "1.0.15",
