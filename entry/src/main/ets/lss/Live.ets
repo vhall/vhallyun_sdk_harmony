@@ -6,7 +6,8 @@ import { VHLivePlayer, VHLivePlayerView, VHPlayerStatus, VHDefinition, VHWaterMa
   VHPlayerError,
   VHPlayerPipStatus,
   VHCastPlayMediaSource,
-  VHCastPlayDevice
+  VHCastPlayDevice,
+  VHPlayerPipControlPanelStatus
 } from '@vhall/vhallyun-lss-vod'
 import { promptAction, router, window } from '@kit.ArkUI';
 import StyleConstants from '../common/constants/StyleConstants';
@@ -88,10 +89,9 @@ struct Live {
     this.livePlayerModel.initCastPlay(this.source);
     this.livePlayerModel.setVHLivePlayerInterface(this);
     this.initScalingMode();
-    this.document.setVHDocInterface(this);
     //初始化直播文档，进行消息监听
     this.imBase.init(this.channel_id, this.access_token);
-    this.document.initLiveDoc(this.lss_id, this.channel_id, this.access_token, true)
+    this.document.initLiveDoc(this.lss_id, this.channel_id, this.access_token, true,this);
     let context = getContext(this);
     window.getLastWindow(context)
       .then((window) => {
@@ -116,7 +116,11 @@ struct Live {
     this.livePlayerModel.destroyPlayer();
     //释放文档
     this.document.destroyDoc();
-    clearInterval(this.rePullStreamTimerId);
+    if(this.rePullStreamTimerId != 0){
+      clearInterval(this.rePullStreamTimerId);
+      this.rePullStreamTimerId = 0;
+    }
+
   }
 
   // 页面初次加载的时候
@@ -135,6 +139,17 @@ struct Live {
     this.playState = this.livePlayerModel.getPlayerState();
     if(!this.isCasting){
       this.livePlayerModel.pausePlay();
+    }
+  }
+
+  onPipControlPanelStatusChange(state:VHPlayerPipControlPanelStatus){
+    switch (state){
+      case VHPlayerPipControlPanelStatus.CONTROL_PAUSE:
+        this.livePlayerModel.pausePlay();
+        break;
+      case VHPlayerPipControlPanelStatus.CONTROL_PLAY:
+        this.livePlayerModel.resumePlay();
+        break;
     }
   }
 
@@ -163,6 +178,7 @@ struct Live {
   dolayChannelID(channelID: string): number {
     return 0;
   }
+
 
   /**
    * 是否显示文档
@@ -380,10 +396,16 @@ struct Live {
     let msg = '[code:' + error.code + ']:' + error.name + ' ';
     switch (error.code) {
       case VHErrorCode.PLAY_STREAM_FAILED:{
-        clearInterval(this.rePullStreamTimerId);
+        if(this.rePullStreamTimerId != 0){
+          clearInterval(this.rePullStreamTimerId);
+          this.rePullStreamTimerId = 0;
+        }
         this.rePullStreamTimerId = setInterval(() => {
           this.livePlayerModel.startPlay(this.lss_id, this.access_token,this.logReport);
-          clearInterval(this.rePullStreamTimerId);
+          if(this.rePullStreamTimerId){
+            clearInterval(this.rePullStreamTimerId);
+            this.rePullStreamTimerId = 0;
+          }
         }, 2000);
         let id = $r('app.string.play_url_error').id;
         let context = getContext(this) as common.UIAbilityContext;
@@ -392,10 +414,16 @@ struct Live {
         break;
       }
       case VHErrorCode.PLAY_TIMEOUT:{
-        clearInterval(this.rePullStreamTimerId);
+        if(this.rePullStreamTimerId){
+          clearInterval(this.rePullStreamTimerId);
+          this.rePullStreamTimerId = 0;
+        }
         this.rePullStreamTimerId = setInterval(() => {
           this.livePlayerModel.startPlay(this.lss_id, this.access_token,this.logReport);
-          clearInterval(this.rePullStreamTimerId);
+          if(this.rePullStreamTimerId){
+            clearInterval(this.rePullStreamTimerId);
+            this.rePullStreamTimerId = 0;
+          }
         }, 2000);
         let playTimeout = $r('app.string.play_timeout').id;
         let cont = getContext(this) as common.UIAbilityContext;
@@ -414,10 +442,16 @@ struct Live {
       case VHErrorCode.NETWORK_ERROR:{
         //如果没有播放调度地址或播放失败，需要应用层根据业务需求判断是否重新拉流。
         if(true){
-          clearInterval(this.rePullStreamTimerId);
+          if(this.rePullStreamTimerId){
+            clearInterval(this.rePullStreamTimerId);
+            this.rePullStreamTimerId = 0;
+          }
           this.rePullStreamTimerId = setInterval(() => {
             this.livePlayerModel.startPlay(this.lss_id, this.access_token,this.logReport);
-            clearInterval(this.rePullStreamTimerId);
+            if(this.rePullStreamTimerId){
+              clearInterval(this.rePullStreamTimerId);
+              this.rePullStreamTimerId = 0;
+            }
           }, 2000);
         }
         break;
@@ -750,10 +784,16 @@ struct Live {
       }, (doc: VHDocument, index: number) => {
         //this.selectCid 发生改变时刷新文档当前页。
         if (this.selectCid == doc.documentViewModel.cid) {
-          clearInterval(this.selectDocument);
+          if(this.selectDocument != 0){
+            clearInterval(this.selectDocument);
+            this.selectDocument = 0;
+          }
           this.selectDocument = setInterval(() => {
             this.controller.changeIndex(index);
-            clearInterval(this.selectDocument);
+            if(this.selectDocument != 0){
+              clearInterval(this.selectDocument);
+              this.selectDocument = 0;
+            }
           }, 100);
         }
         return doc.documentViewModel.cid;

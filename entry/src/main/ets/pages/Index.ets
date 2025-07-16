@@ -8,10 +8,9 @@ import StyleConstants from '../common/constants/StyleConstants';
 @Component
 struct Index {
   @State message: string = VHBase.getSDKVersion();
-  @State appid: string = '15df4d3f';
+  @State appid: string = '';
   @State access_token: string = '';
   @State channel_id: string = '';
-
   @State lss_id: string = '';
   @State record_id: string = '';
   @State userid: string = 'HarmonyOS';

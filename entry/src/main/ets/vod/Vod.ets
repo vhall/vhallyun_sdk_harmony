@@ -6,7 +6,8 @@ import { VHVodPlayer, VHVodPlayerView, VHPlayerStatus, VHDefinition, VHCastPlayS
   VHErrorCode,
   VHPlayerError,
   VHVodPlayerSpeed,
-  VHWaterMarkLocation } from '@vhall/vhallyun-lss-vod'
+  VHWaterMarkLocation,
+  VHPlayerPipControlPanelStatus} from '@vhall/vhallyun-lss-vod'
 import { promptAction, router, window } from '@kit.ArkUI';
 import StyleConstants from '../common/constants/StyleConstants';
 import {logData} from '../common/constants/StyleConstants';
@@ -102,8 +103,7 @@ struct Vod {
     this.vodPlayerModel.setVHLivePlayerInterface(this, this);
     this.initSpeed();
     this.initScalingMode();
-    this.document.setVHDocInterface(this);
-    this.document.initVodDoc(this.record_id, this.access_token);
+    this.document.initVodDoc(this.record_id, this.access_token,this);
     let context = getContext(this);
     window.getLastWindow(context)
       .then((window) => {
@@ -251,6 +251,18 @@ struct Vod {
    */
   onPipStatusChange(state: VHPlayerPipStatus) {
 
+  }
+
+
+  onPipControlPanelStatusChange(state:VHPlayerPipControlPanelStatus){
+    switch (state){
+      case VHPlayerPipControlPanelStatus.CONTROL_PAUSE:
+        this.vodPlayerModel.pausePlay();
+        break;
+      case VHPlayerPipControlPanelStatus.CONTROL_PLAY:
+        this.vodPlayerModel.resumePlay();
+        break;
+    }
   }
 
   initScalingMode() {
@@ -423,10 +435,14 @@ struct Vod {
     let msg = '[code:' + error.code + ']:' + error.name + ' ';
     switch (error.code) {
       case VHErrorCode.PLAY_STREAM_FAILED:{
-        clearInterval(this.rePullStreamTimerId);
+        if(this.rePullStreamTimerId){
+          clearInterval(this.rePullStreamTimerId);
+          this.rePullStreamTimerId = 0;
+        }
         this.rePullStreamTimerId = setInterval(() => {
           this.vodPlayerModel.startPlay(this.record_id, this.access_token,this.logReport);
           clearInterval(this.rePullStreamTimerId);
+          this.rePullStreamTimerId = 0;
         }, 2000);
         let id = $r('app.string.play_url_error').id;
         let context = getContext(this) as common.UIAbilityContext;
@@ -435,9 +451,14 @@ struct Vod {
         break;
       }
       case VHErrorCode.PLAY_TIMEOUT:{
-        clearInterval(this.rePullStreamTimerId);
+        if(this.rePullStreamTimerId != 0){
+          clearInterval(this.rePullStreamTimerId);
+          this.rePullStreamTimerId = 0;
+        }
+
         this.rePullStreamTimerId = setInterval(() => {
           clearInterval(this.rePullStreamTimerId);
+          this.rePullStreamTimerId = 0;
           this.vodPlayerModel.startPlay(this.record_id, this.access_token,this.logReport);
         }, 2000);
         break;
@@ -453,9 +474,14 @@ struct Vod {
       case VHErrorCode.NETWORK_ERROR:{
         //如果没有播放调度地址或播放失败，需要应用层根据业务需求判断是否重新拉流。
         if(true){
-          clearInterval(this.rePullStreamTimerId);
+          if(this.rePullStreamTimerId != 0){
+            clearInterval(this.rePullStreamTimerId);
+            this.rePullStreamTimerId = 0;
+          }
+
           this.rePullStreamTimerId = setInterval(() => {
             clearInterval(this.rePullStreamTimerId);
+            this.rePullStreamTimerId = 0;
             this.vodPlayerModel.startPlay(this.record_id, this.access_token,this.logReport);
           }, 2000);
         }
@@ -502,6 +528,8 @@ struct Vod {
         duration: StyleConstants.PLAY_ERROR_TIME,
         message: '视频加载中'
       });
+    }else if(state == VHPlayerStatus.PREPARED){
+      this.vodPlayerModel.initPipController(true,'');
     }
   }
 
@@ -688,9 +716,11 @@ struct Vod {
     Flex({ direction: FlexDirection.Row, justifyContent: FlexAlign.Start }) {
       Button($r('app.string.pause')).onClick(() => {
         this.vodPlayerModel.pausePlay();
+        this.vodPlayerModel.updatePipControlStatus(VHPlayerPipControlPanelStatus.CONTROL_PAUSE);
       })
       Button($r('app.string.resume')).onClick(() => {
         this.vodPlayerModel.resumePlay();
+        this.vodPlayerModel.updatePipControlStatus(VHPlayerPipControlPanelStatus.CONTROL_PLAY);
       })
 
       Button($r('app.string.stop')).onClick(() => {
@@ -698,7 +728,7 @@ struct Vod {
       })
       Button($r('app.string.start_play')).onClick(() => {
         this.documentViews.splice(0, this.documentViews.length);
-        this.document.initVodDoc(this.record_id, this.access_token);
+        this.document.initVodDoc(this.record_id, this.access_token,this);
         this.vodPlayerModel.startPlay(this.record_id, this.access_token,this.logReport);
       })
     }
@@ -891,10 +921,16 @@ struct Vod {
       }, (doc: VHDocument, index: number) => {
         //this.selectCid 发生改变时刷新文档当前页。
         if (this.selectCid == doc.documentViewModel.cid) {
-          clearInterval(this.selectDocument);
+          if(this.selectDocument != 0){
+            clearInterval(this.selectDocument);
+            this.selectDocument = 0;
+          }
           this.selectDocument = setInterval(() => {
             this.controller.changeIndex(index);
-            clearInterval(this.selectDocument);
+            if(this.selectDocument != 0){
+              clearInterval(this.selectDocument);
+              this.selectDocument = 0;
+            }
           }, 100);
         }
         return doc.documentViewModel.cid;

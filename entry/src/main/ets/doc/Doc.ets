@@ -128,11 +128,19 @@ struct Doc {
 
       }, (doc: VHDocument, index: number) => {
         if (this.selectCid == doc.documentViewModel.cid) {
-          clearInterval(this.selectDocument);
+          if(this.selectDocument != 0){
+            clearInterval(this.selectDocument);
+            this.selectDocument = 0;
+          }
           //启动定时延迟切换到对应标签。
           this.selectDocument = setInterval(() => {
             this.controller.changeIndex(index);
-            clearInterval(this.selectDocument);
+            if(this.selectDocument != 0){
+              if(this.selectDocument != 0){
+                clearInterval(this.selectDocument);
+                this.selectDocument = 0;
+              }
+            }
           }, 100);
         }
         return doc.documentViewModel.cid;
@@ -501,9 +509,8 @@ struct Doc {
           mode.docHeight = 360;
           mode.backgroundColor = '#777777';
           let document: VHDocument = new VHDocument();
-          document.setVHDocInterface(this);
           //文档演示发起端主动创建需要调用此接口。
-          document.initDemonstration(mode, this.access_token, this.lss_id, this.channel_id);
+          document.initDemonstration(mode, this.access_token, this.lss_id, this.channel_id,this);
           this.insertDocumentItem(document);
           this.selectCid = mode.cid;
         })
@@ -518,9 +525,8 @@ struct Doc {
           mode.docHeight = 360;
           mode.backgroundColor = '#ffffff';
           const document: VHDocument = new VHDocument();
-          document.setVHDocInterface(this);
           this.insertDocumentItem(document);
-          document.initDemonstration(mode, this.access_token, this.lss_id, this.channel_id);
+          document.initDemonstration(mode, this.access_token, this.lss_id, this.channel_id,this);
           this.selectCid = mode.cid;
         })
           .fontSize(StyleConstants.BUTTON_FONT_SIZE)
@@ -591,9 +597,8 @@ struct Doc {
   aboutToAppear(): void {
     // 打印版本号
     console.log('Doc版本号' + VHDocument.getSDKVersion());
-    this.document.setVHDocInterface(this);
     //初始化直播文档，监听文档消息。
-    this.document.initLiveDoc(this.lss_id, this.channel_id, this.access_token, true)
+    this.document.initLiveDoc(this.lss_id, this.channel_id, this.access_token, true, this)
   }
 
   aboutToDisappear(): void {
