@@ -84,7 +84,7 @@ struct Live {
       title:'我的回放',
       name:'微吼直播',
       description:'当前播放为回放视频',
-      headImage:$r("app.media.icon")
+      headImage:"https://q3.itc.cn/q_70/images03/20250328/eb685be206974653af5acbff051bd9f3.jpeg"
     };
     this.livePlayerModel.initCastPlay(this.source);
     this.livePlayerModel.setVHLivePlayerInterface(this);

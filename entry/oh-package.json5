@@ -8,8 +8,8 @@
   "dependencies": {
     "@vhall/vhallyun-framework": "1.8.3",
     "@vhall/vhallyun-ims": "1.8.3",
-    "@vhall/vhallyun-lss-vod": "1.8.7",
-    "@vhall/vhallyun-doc": "1.8.4"
+    "@vhall/vhallyun-lss-vod": "1.8.11",
+    "@vhall/vhallyun-doc": "1.8.5"
   }
 }
 

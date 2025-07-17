@@ -96,7 +96,7 @@ struct Vod {
       title:'我的回放',
       name:'微吼直播',
       description:'当前播放为回放视频',
-      headImage:$r("app.media.icon")
+      headImage:"https://q3.itc.cn/q_70/images03/20250328/eb685be206974653af5acbff051bd9f3.jpeg"
     };
     //初始化投屏后，会创建媒体会话绑定播控服务。如果不使用投屏功能不要进行初始化。
     this.vodPlayerModel.initCastPlay(this.source);
@@ -731,6 +731,13 @@ struct Vod {
         this.document.initVodDoc(this.record_id, this.access_token,this);
         this.vodPlayerModel.startPlay(this.record_id, this.access_token,this.logReport);
       })
+      AVCastPicker({
+        customPicker: (): void => this.componentBuilder(),
+        normalColor: Color.Black,
+        onStateChange: this.onStateChange
+      })
+        .width('40vp')
+        .height('40vp')
     }
 
     Flex({ direction: FlexDirection.Row, justifyContent: FlexAlign.Start }) {
@@ -968,13 +975,6 @@ struct Vod {
               this.playLandSpaceMode = false;
             })
 
-            AVCastPicker({
-              customPicker: (): void => this.componentBuilder(),
-              normalColor: Color.Black,
-              onStateChange: this.onStateChange
-            })
-              .width('40vp')
-              .height('40vp')
           }.zIndex(2)
 
           Column() {
