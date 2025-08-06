@@ -170,16 +170,6 @@ struct Live {
 
   }
 
-  /**  直播文档同步
-   *
-   * @param channelID 文档channelID
-   * @return number 延迟执行时间(秒)
-   */
-  dolayChannelID(channelID: string): number {
-    return 0;
-  }
-
-
   /**
    * 是否显示文档
    * @param switchStatus 状态
@@ -348,7 +338,7 @@ struct Live {
    */
   onVHPlayerViewLoaded() {
     // 初次进入调用播放
-    this.livePlayerModel.startPlay(this.lss_id, this.access_token,this.logReport);
+    this.livePlayerModel.startPlay(this.lss_id, this.access_token,VHDefinition.ORIGIN);
   }
 
   /**
@@ -401,7 +391,8 @@ struct Live {
           this.rePullStreamTimerId = 0;
         }
         this.rePullStreamTimerId = setInterval(() => {
-          this.livePlayerModel.startPlay(this.lss_id, this.access_token,this.logReport);
+          let def = this.getPlayDefinition(this.vhLiveDefText);
+          this.livePlayerModel.startPlay(this.lss_id, this.access_token,def);
           if(this.rePullStreamTimerId){
             clearInterval(this.rePullStreamTimerId);
             this.rePullStreamTimerId = 0;
@@ -419,7 +410,8 @@ struct Live {
           this.rePullStreamTimerId = 0;
         }
         this.rePullStreamTimerId = setInterval(() => {
-          this.livePlayerModel.startPlay(this.lss_id, this.access_token,this.logReport);
+          let def = this.getPlayDefinition(this.vhLiveDefText);
+          this.livePlayerModel.startPlay(this.lss_id, this.access_token,def);
           if(this.rePullStreamTimerId){
             clearInterval(this.rePullStreamTimerId);
             this.rePullStreamTimerId = 0;
@@ -447,7 +439,7 @@ struct Live {
             this.rePullStreamTimerId = 0;
           }
           this.rePullStreamTimerId = setInterval(() => {
-            this.livePlayerModel.startPlay(this.lss_id, this.access_token,this.logReport);
+            this.livePlayerModel.startPlay(this.lss_id, this.access_token,VHDefinition.ORIGIN);
             if(this.rePullStreamTimerId){
               clearInterval(this.rePullStreamTimerId);
               this.rePullStreamTimerId = 0;
@@ -484,7 +476,7 @@ struct Live {
       });
       //直播状态如果远端停止推流，会触发此事件。应用层根据业务判断是否重新拉流。
       if(true){
-        this.livePlayerModel.startPlay(this.lss_id, this.access_token,this.logReport);
+        this.livePlayerModel.startPlay(this.lss_id, this.access_token,VHDefinition.ORIGIN);
       }
     } else if (state == VHPlayerStatus.STOP) {
       promptAction.showToast({
@@ -618,7 +610,7 @@ struct Live {
         this.livePlayerModel.stopPlay();
       })
       Button($r('app.string.start_play')).onClick(() => {
-        this.livePlayerModel.startPlay(this.lss_id, this.access_token,this.logReport);
+       this.livePlayerModel.startPlay(this.lss_id, this.access_token,VHDefinition.ORIGIN);
       })
     }
 

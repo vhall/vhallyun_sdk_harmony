@@ -243,7 +243,7 @@ struct Vod {
    */
   onVHPlayerViewLoaded() {
     // 初次进入调用播放
-    this.vodPlayerModel.startPlay(this.record_id, this.access_token,this.logReport);
+    this.vodPlayerModel.startPlay(this.record_id, this.access_token,VHDefinition.ORIGIN);
   }
 
   /**
@@ -440,7 +440,8 @@ struct Vod {
           this.rePullStreamTimerId = 0;
         }
         this.rePullStreamTimerId = setInterval(() => {
-          this.vodPlayerModel.startPlay(this.record_id, this.access_token,this.logReport);
+          let def = this.getPlayDefinition(this.vhLiveDefText);
+          this.vodPlayerModel.startPlay(this.record_id, this.access_token,def);
           clearInterval(this.rePullStreamTimerId);
           this.rePullStreamTimerId = 0;
         }, 2000);
@@ -459,7 +460,8 @@ struct Vod {
         this.rePullStreamTimerId = setInterval(() => {
           clearInterval(this.rePullStreamTimerId);
           this.rePullStreamTimerId = 0;
-          this.vodPlayerModel.startPlay(this.record_id, this.access_token,this.logReport);
+          let def = this.getPlayDefinition(this.vhLiveDefText);
+          this.vodPlayerModel.startPlay(this.record_id, this.access_token,def);
         }, 2000);
         break;
       }
@@ -482,7 +484,8 @@ struct Vod {
           this.rePullStreamTimerId = setInterval(() => {
             clearInterval(this.rePullStreamTimerId);
             this.rePullStreamTimerId = 0;
-            this.vodPlayerModel.startPlay(this.record_id, this.access_token,this.logReport);
+            let def = this.getPlayDefinition(this.vhLiveDefText);
+            this.vodPlayerModel.startPlay(this.record_id, this.access_token,def);
           }, 2000);
         }
         break;
@@ -667,19 +670,6 @@ struct Vod {
 
   }
 
-  onStateChange(state: AVCastPickerState) {
-    if (state == AVCastPickerState.STATE_APPEARING) {
-      console.log('The picker starts showing.');
-      // 定义一个eventId为1的事件。
-      let event: emitter.InnerEvent = {
-        eventId: 1
-      };
-      emitter.emit(event);
-    } else if (state == AVCastPickerState.STATE_DISAPPEARING) {
-      console.log('The picker finishes presenting.');
-    }
-  }
-
   getDownLoadSpeed(speed: number): string {
     let strSpeed = '0 bp/s';
     if (speed < StyleConstants.PLAY_SPEED_BPS) { //
@@ -729,12 +719,11 @@ struct Vod {
       Button($r('app.string.start_play')).onClick(() => {
         this.documentViews.splice(0, this.documentViews.length);
         this.document.initVodDoc(this.record_id, this.access_token,this);
-        this.vodPlayerModel.startPlay(this.record_id, this.access_token,this.logReport);
+        this.vodPlayerModel.startPlay(this.record_id, this.access_token,VHDefinition.ORIGIN);
       })
       AVCastPicker({
         customPicker: (): void => this.componentBuilder(),
-        normalColor: Color.Black,
-        onStateChange: this.onStateChange
+        normalColor: Color.Black
       })
         .width('40vp')
         .height('40vp')
