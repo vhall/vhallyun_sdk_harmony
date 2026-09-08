@@ -2,12 +2,12 @@ import { VHVodPlayer, VHVodPlayerView, VHPlayerStatus, VHDefinition, VHCastPlayS
   VHCastPlayMediaSource,VHCastPlayDevice,  VHPlayerScalingMode,
   WaiterMaskPostion,
   VHPlayerPipStatus,
+  VHPlayerPipControlPanelStatus,
   VHPlayStreamType,
   VHErrorCode,
   VHPlayerError,
   VHVodPlayerSpeed,
-  VHWaterMarkLocation,
-  VHPlayerPipControlPanelStatus} from '@vhall/vhallyun-lss-vod'
+  VHWaterMarkLocation } from '@vhall/vhallyun-lss-vod'
 import { promptAction, router, window } from '@kit.ArkUI';
 import StyleConstants from '../common/constants/StyleConstants';
 import {logData} from '../common/constants/StyleConstants';
@@ -20,17 +20,22 @@ import image from '@ohos.multimedia.image';
 import {
   VHDocFilType,
   VHDocument,
+  VHDocumentPageModel,
   VHDocumentView,
   VHDocumentViewModel,
   VHDocumentWaterMark
 } from '@vhall/vhallyun-doc';
-
+import { bundleManager } from '@kit.AbilityKit';
 import { AVCastPicker, AVCastPickerState } from '@kit.AVSessionKit';
 import { backgroundTaskManager } from '@kit.BackgroundTasksKit';
 import { TaskManager } from '../common/utils/TaskUitl';
 import { emitter } from '@kit.BasicServicesKit';
 
 
+@Builder
+export function VodBuilder(name: string, param: object) {
+  Vod({ record_id: param['record_id'], access_token: param['access_token'], user_id: param['userid']})
+}
 @Entry
 @Component
 struct Vod {
@@ -39,10 +44,10 @@ struct Vod {
   @State livePlayCreate: boolean = false;
   // 获取上个界面传递过来的房间号
   params: object = router.getParams() as object;
-  public record_id: string = this.params['record_id'];
-  public access_token: string = this.params['access_token'];
-  public user_id:string = this.params['userid'];
-  private channel_id: string = this.params['channel_id'];
+  public record_id: string = '';//this.params['record_id'];
+  public access_token: string = '';//this.params['access_token'];
+  public user_id:string = '';//this.params['userid'];
+  private channel_id: string = '';//this.params['channel_id'];
   private isFirstShow: boolean = true;
   /**
    * 页面退到后台前获取播放状态，用于回到前台进行播放判断。
@@ -50,6 +55,7 @@ struct Vod {
   private playState: VHPlayerStatus = VHPlayerStatus.INIT;
   //如果为文件操作方
   private isDocController:boolean = false;
+  private autoPip:boolean = true;
   //是否显示文档
   @State showDoc: boolean = true;
   @State hasAudio: boolean = false;
@@ -75,6 +81,7 @@ struct Vod {
   @State waterPText: string = '左上';
   @State waterPIndex: number = 0;
   @State selectCid: string = '';
+  pageInfos: NavPathStack = new NavPathStack() // 导航
   private selectDocument: number = 0;
   @State documentViews: Array<VHDocument> = new Array();
   private document: VHDocument = new VHDocument(new VHDocumentViewModel(VHDocFilType.DOC));
@@ -99,10 +106,12 @@ struct Vod {
       headImage:"https://q3.itc.cn/q_70/images03/20250328/eb685be206974653af5acbff051bd9f3.jpeg"
     };
     //初始化投屏后，会创建媒体会话绑定播控服务。如果不使用投屏功能不要进行初始化。
+
     this.vodPlayerModel.initCastPlay(this.source);
     this.vodPlayerModel.setVHLivePlayerInterface(this, this);
     this.initSpeed();
     this.initScalingMode();
+    // this.document.setVHDocInterface(this);
     this.document.initVodDoc(this.record_id, this.access_token,this);
     let context = getContext(this);
     window.getLastWindow(context)
@@ -112,6 +121,10 @@ struct Vod {
       .catch((err: BusinessError)=>{
         console.error('Error occurred:', err);
       })
+
+    let bundleFlags = bundleManager.BundleFlag.GET_BUNDLE_INFO_WITH_SIGNATURE_INFO;
+    let bundleInfo = bundleManager.getBundleInfoForSelfSync(bundleFlags)
+    let info = bundleInfo.signatureInfo.fingerprint;
 
     let data = new logData;
     data.join_id = 876768888;
@@ -131,6 +144,9 @@ struct Vod {
 
   // 页面初次加载的时候
   onPageShow(): void {
+
+
+
     if (this.isFirstShow) {
       this.isFirstShow = false;
     } else {
@@ -139,14 +155,18 @@ struct Vod {
         this.vodPlayerModel.resumePlay();
       }
     }
+
+
+
   }
 
   onPageHide(): void {
     this.playState = this.vodPlayerModel.getPlayerState();
     //判断是否需要继续进行播放。如果没有投屏则暂停播放
     if(!this.isCasting){
-      this.vodPlayerModel.pausePlay();
+     // this.vodPlayerModel.pausePlay();
     }
+    // this.vodPlayerModel.startPiP();
   }
 
   /**
@@ -163,15 +183,6 @@ struct Vod {
   }
 
   /**
-   *  直播文档同步
-   * @param channelID 文档channelID
-   * @return number 延迟执行时间(秒)
-   */
-  dolayChannelID(channelID: string): number {
-    return 0;
-  }
-
-  /**
    * 是否显示文档
    * @param switchStatus 状态
    */
@@ -183,7 +194,7 @@ struct Vod {
    * 翻页消息
    * @param documentView   文档id 为空时没有 文档
    */
-  docChangePage(docViewModel: VHDocumentViewModel): void {
+  docChangePage(docViewModel: VHDocumentPageModel): void {
 
   }
 
@@ -200,10 +211,27 @@ struct Vod {
    * @param documentView 文档视图
    */
   docAdd(docViewModel: VHDocumentViewModel): void {
+    // this.documentViews = [];
     if (!this.isExistDocument(docViewModel.cid)) {
-      let document: VHDocument = new VHDocument(docViewModel);
-      this.insertDocumentItem(document);
+
+
+      //为了确保文档每次都刷新添加，延迟展示。
+      this.selectDocument = setTimeout(() => {
+        // this.documentViews.push(id);
+
+        let document: VHDocument = new VHDocument(docViewModel);
+        this.insertDocumentItem(document);
+        // this.showDoc = true;
+      }, 1000);
     }
+  }
+
+  /**
+   * @description 文档加载完成
+   * @param documentView   文档id 为空时没有 文档
+   */
+  docViewLoadEnd(doc: VHDocument){
+
   }
 
   /**
@@ -250,7 +278,7 @@ struct Vod {
    * 画中画状态
    */
   onPipStatusChange(state: VHPlayerPipStatus) {
-
+    this.vodPlayerModel.setPiPControlEnabled(false);
   }
 
 
@@ -406,6 +434,7 @@ struct Vod {
       duration: StyleConstants.PLAY_ERROR_TIME,
       message: '水印加载成功'
     });
+    this.vodPlayerModel.setWaterMarkUrl(false);
   }
 
   /**
@@ -532,7 +561,7 @@ struct Vod {
         message: '视频加载中'
       });
     }else if(state == VHPlayerStatus.PREPARED){
-      this.vodPlayerModel.initPipController(true,'');
+      this.vodPlayerModel.initPipController(this.autoPip,'VHCWatch');
     }
   }
 
@@ -670,6 +699,19 @@ struct Vod {
 
   }
 
+  // onStateChange(state: AVCastPickerState) {
+  //   if (state == AVCastPickerState.STATE_APPEARING) {
+  //     console.log('The picker starts showing.');
+  //     // 定义一个eventId为1的事件。
+  //     let event: emitter.InnerEvent = {
+  //       eventId: 1
+  //     };
+  //     emitter.emit(event);
+  //   } else if (state == AVCastPickerState.STATE_DISAPPEARING) {
+  //     console.log('The picker finishes presenting.');
+  //   }
+  // }
+
   getDownLoadSpeed(speed: number): string {
     let strSpeed = '0 bp/s';
     if (speed < StyleConstants.PLAY_SPEED_BPS) { //
@@ -724,8 +766,7 @@ struct Vod {
       AVCastPicker({
         customPicker: (): void => this.componentBuilder(),
         normalColor: Color.Black
-      })
-        .width('40vp')
+      }).width('40vp')
         .height('40vp')
     }
 
@@ -864,6 +905,11 @@ struct Vod {
       Button($r('app.string.start_pip')).onClick(() => {
         this.vodPlayerModel.startPiP();
       })
+
+      Button($r('app.string.auto_pip')).onClick(() => {
+        this.autoPip = !this.autoPip;
+        this.vodPlayerModel.setPipAutoStartEnabled(this.autoPip);
+      })
       Button($r('app.string.stop_pip')).onClick(() => {
         this.vodPlayerModel.stopPip();
       })
@@ -941,65 +987,81 @@ struct Vod {
   }
 
   build() {
-    Column({ space: StyleConstants.COLUMN_SPACE }) {
-      Navigation().title(this.NavigationTitle).width(StyleConstants.FULL_HEIGHT).height('5%')
-      Column() {
-        Stack({ alignContent: Alignment.TopEnd }) {
-          // 播放器容器
-          VHVodPlayerView({ componentListener: this, vodPlayer: this.vodPlayerModel })
-            .width(StyleConstants.FULL_WIDTH)
-            .height(this.playLandSpaceMode ? StyleConstants.FULL_HEIGHT : StyleConstants.VH_PLAYER_NORMAL_HEIGHT)
-            .backgroundColor(Color.Black)
-            .align(Alignment.Center)
-            .zIndex(1)
-          Row(){
-            Button($r('app.string.player_landspace')).onClick(() => {
-              let windowStage: window.WindowStage = AppStorage.get('windowStage') as window.WindowStage;
-              windowStage.getMainWindowSync().setPreferredOrientation(window.Orientation.LANDSCAPE);
-              this.playLandSpaceMode = true;
-            })
-            Button($r('app.string.play_portrait')).onClick(() => {
-              let windowStage: window.WindowStage = AppStorage.get('windowStage') as window.WindowStage;
-              windowStage.getMainWindowSync().setPreferredOrientation(window.Orientation.PORTRAIT);
-              this.playLandSpaceMode = false;
-            })
+    NavDestination(){
+      Column({ space: StyleConstants.COLUMN_SPACE }) {
+        Navigation().title(this.NavigationTitle).width(StyleConstants.FULL_HEIGHT).height('5%')
+        Column() {
+          Stack({ alignContent: Alignment.TopEnd }) {
+            // 播放器容器
+            VHVodPlayerView({ componentListener: this, vodPlayer: this.vodPlayerModel })
+              .width(StyleConstants.FULL_WIDTH)
+              .height(this.playLandSpaceMode ? StyleConstants.FULL_HEIGHT : StyleConstants.VH_PLAYER_NORMAL_HEIGHT)
+              .backgroundColor(Color.Black)
+              .align(Alignment.Center)
+              .zIndex(1)
+            Row(){
+              Button($r('app.string.player_landspace')).onClick(() => {
+                let windowStage: window.WindowStage = AppStorage.get('windowStage') as window.WindowStage;
+                windowStage.getMainWindowSync().setPreferredOrientation(window.Orientation.LANDSCAPE);
+                this.playLandSpaceMode = true;
+              })
+              Button($r('app.string.play_portrait')).onClick(() => {
+                let windowStage: window.WindowStage = AppStorage.get('windowStage') as window.WindowStage;
+                windowStage.getMainWindowSync().setPreferredOrientation(window.Orientation.PORTRAIT);
+                this.playLandSpaceMode = false;
+              })
 
-          }.zIndex(2)
+              Button("还原")
+                .onClick(()=>{
+                  this.documentViews.forEach((value:VHDocument,index:number,array:VHDocument[])=>{
+                    value.zoomReset();
 
-          Column() {
-            Row() {
-              Button("停止投屏")
-                .fontColor(Color.White)
-                .backgroundColor('#333333')
-                .onClick(() => {
-                  this.vodPlayerModel.StopCastPlay();
+                  })
                 })
-                .margin({
-                  left: '12vp',
-                  right: '12vp'
-                })
+
+
+            }.zIndex(2)
+
+            Column() {
+              Row() {
+                Button("停止投屏")
+                  .fontColor(Color.White)
+                  .backgroundColor('#333333')
+                  .onClick(() => {
+                    this.vodPlayerModel.StopCastPlay();
+                  })
+                  .margin({
+                    left: '12vp',
+                    right: '12vp'
+                  })
+              }
+              .justifyContent(FlexAlign.Center)
+              .width('100%')
             }
             .justifyContent(FlexAlign.Center)
-            .width('100%')
+            .backgroundColor(Color.Black)
+            .width(StyleConstants.FULL_WIDTH)
+            .height(this.playLandSpaceMode ? StyleConstants.FULL_HEIGHT : StyleConstants.VH_PLAYER_NORMAL_HEIGHT)
+            .zIndex(this.isCasting ? 3 : 0)
           }
-          .justifyContent(FlexAlign.Center)
-          .backgroundColor(Color.Black)
-          .width(StyleConstants.FULL_WIDTH)
-          .height(this.playLandSpaceMode ? StyleConstants.FULL_HEIGHT : StyleConstants.VH_PLAYER_NORMAL_HEIGHT)
-          .zIndex(this.isCasting ? 3 : 0)
+          this.documentViewBuilder();
+          this.VHLivePlayCtl();
         }
-        this.documentViewBuilder();
-        this.VHLivePlayCtl();
       }
-    }
-    .alignItems(HorizontalAlign.Center)
-    .height(StyleConstants.FULL_HEIGHT)
-    .padding({
-      top: 0,
-      left: 8,
-      bottom: 0,
-      right: 8
+      .alignItems(HorizontalAlign.Center)
+      .height(StyleConstants.FULL_HEIGHT)
+      .padding({
+        top: 0,
+        left: 8,
+        bottom: 0,
+        right: 8
+      })
+    }.onReady((context: NavDestinationContext) => {
+      this.pageInfos = context.pathStack
     })
+    .id('VHVodCWatch')
+    .hideBackButton(true)
+
   }
 
   @Builder

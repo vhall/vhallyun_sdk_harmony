@@ -22,21 +22,7 @@
         "name": "release"
       }
     ],
-    "signingConfigs": [
-      {
-        "name": "default",
-        "type": "HarmonyOS",
-        "material": {
-          "certpath": "C:\\Users\\yuqiu\\.ohos\\config\\default_vhallyun_sdk_harmony_wmsFJh4zUx2DHVMkxHGF0F70yBWsB5fG8a-8YZnIYAM=.cer",
-          "keyAlias": "debugKey",
-          "keyPassword": "0000001BCEE7E2B5763448DB912F44531AF732000ED71CAA665F3585A60F69260E3DB62DB04AF11FFAE362",
-          "profile": "C:\\Users\\yuqiu\\.ohos\\config\\default_vhallyun_sdk_harmony_wmsFJh4zUx2DHVMkxHGF0F70yBWsB5fG8a-8YZnIYAM=.p7b",
-          "signAlg": "SHA256withECDSA",
-          "storeFile": "C:\\Users\\yuqiu\\.ohos\\config\\default_vhallyun_sdk_harmony_wmsFJh4zUx2DHVMkxHGF0F70yBWsB5fG8a-8YZnIYAM=.p12",
-          "storePassword": "0000001BB00089F918BFDA632F7C2F3D3D7E5B2FAE342C7B42E381D8D96F2E1F40989960B90B4C009C40EB"
-        }
-      }
-    ]
+
   },
   "modules": [
     {

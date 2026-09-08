@@ -133,6 +133,10 @@ export default class StyleConstants {
   static readonly WATERMARK_InputWidth: string = '150vp';
 
 
+  static readonly PUSH_STREAM_HIGH: string = '高清';
+  static readonly PUSH_STREAM_LOW: string = '标清';
+
+
   static readonly START_PAINT: string = '开始涂鸦';
   static readonly STOP_PAINT: string = '结束涂鸦';
 

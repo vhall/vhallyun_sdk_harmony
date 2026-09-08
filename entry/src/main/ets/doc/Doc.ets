@@ -1,5 +1,6 @@
 import { promptAction, router } from '@kit.ArkUI';
-import { VHDocument,VHDocumentView,VHDocumentViewModel,VHDocumentDrawType,VHDocumentWaterMark,VHDocumentDrawAction,VHDocFilType} from '@vhall/vhallyun-doc';
+import { VHDocument,VHDocumentView,VHDocumentViewModel,VHDocumentDrawType,VHDocumentWaterMark,VHDocumentDrawAction,VHDocFilType,
+  VHDocumentPageModel} from '@vhall/vhallyun-doc';
 import StyleConstants from '../common/constants/StyleConstants';
 
 
@@ -77,6 +78,15 @@ struct Doc {
     }
     return null;
   }
+
+  /**
+   * @description 文档加载完成
+   * @param documentView   文档id 为空时没有 文档
+   */
+  docViewLoadEnd(doc: VHDocument){
+
+  }
+
 
   getSelectDocumentByCid(cid: string): VHDocument | null {
     for (let index = 0; index < this.documentViews.length; index++) {
@@ -509,6 +519,7 @@ struct Doc {
           mode.docHeight = 360;
           mode.backgroundColor = '#777777';
           let document: VHDocument = new VHDocument();
+          // document.setVHDocInterface(this);
           //文档演示发起端主动创建需要调用此接口。
           document.initDemonstration(mode, this.access_token, this.lss_id, this.channel_id,this);
           this.insertDocumentItem(document);
@@ -525,6 +536,7 @@ struct Doc {
           mode.docHeight = 360;
           mode.backgroundColor = '#ffffff';
           const document: VHDocument = new VHDocument();
+          // document.setVHDocInterface(this);
           this.insertDocumentItem(document);
           document.initDemonstration(mode, this.access_token, this.lss_id, this.channel_id,this);
           this.selectCid = mode.cid;
@@ -597,6 +609,7 @@ struct Doc {
   aboutToAppear(): void {
     // 打印版本号
     console.log('Doc版本号' + VHDocument.getSDKVersion());
+    // this.document.setVHDocInterface(this);
     //初始化直播文档，监听文档消息。
     this.document.initLiveDoc(this.lss_id, this.channel_id, this.access_token, true, this)
   }
@@ -625,15 +638,6 @@ struct Doc {
     }
   }
 
-  /**  直播文档同步
-   *
-   * @param channelID 文档channelID
-   * @return number 延迟执行时间(秒)
-   */
-  dolayChannelID(channelID: string): number {
-    return 0.0;
-  }
-
   /**
    * 是否显示文档
    * @param switchStatus : true 文档可见状态。false：文档不可见状态
@@ -651,7 +655,7 @@ struct Doc {
    * 翻页消息
    * @param documentView   文档id 为空时没有 文档
    */
-  docChangePage(docViewModel: VHDocumentViewModel): void {
+  docChangePage(docViewModel: VHDocumentPageModel): void {
 
   }
 

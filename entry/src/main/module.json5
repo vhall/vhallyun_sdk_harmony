@@ -11,14 +11,44 @@
     ],
     "requestPermissions": [
       {
-        "name" : "ohos.permission.INTERNET",
+        "name" : "ohos.permission.KEEP_BACKGROUND_RUNNING"
+      },
+      {
+        "name" : "ohos.permission.INTERNET"
+      },
+      {
+        "name" : "ohos.permission.USE_BLUETOOTH"
+      },
+      {
+        "name" : "ohos.permission.GET_BUNDLE_INFO"
+      },
+      {
+        "name" : "ohos.permission.GET_NETWORK_INFO"
+      },
+      {
+        "name" : "ohos.permission.GET_WIFI_INFO"
+      },
+      {
+        "name" : "ohos.permission.MODIFY_AUDIO_SETTINGS"
+      },
+      {
+        "name" : "ohos.permission.MICROPHONE",
+        "reason": "$string:module_desc",
+        "usedScene": { "abilities": [ "EntryAbility" ], "when":"always" }
+      },
+      {
+        "name" : "ohos.permission.CAMERA",
+        "reason": "$string:module_desc",
+        "usedScene": { "abilities": [ "EntryAbility" ], "when":"always" }
       }
     ],
     "deliveryWithInstall": true,
     "installationFree": false,
     "pages": "$profile:main_pages",
+    "routerMap": "$profile:route_map",
     "abilities": [
       {
+        "orientation": "auto_rotation",
         "name": "EntryAbility",
         "srcEntry": "./ets/entryability/EntryAbility.ets",
         "description": "$string:EntryAbility_desc",
@@ -27,6 +57,12 @@
         "startWindowIcon": "$media:startIcon",
         "startWindowBackground": "$color:start_window_background",
         "exported": true,
+        "backgroundModes": [
+          // 长时任务类型的配置项
+          "audioRecording",
+          "audioPlayback",
+          "bluetoothInteraction"
+        ],
         "skills": [
           {
             "entities": [

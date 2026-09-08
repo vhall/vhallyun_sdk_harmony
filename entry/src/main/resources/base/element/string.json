@@ -351,6 +351,10 @@
     {
       "name": "enter_doc_room",
       "value": "进入文档房间"
+    },
+    {
+      "name": "auto_pip",
+      "value": "自动开启"
     }
   ]
 }

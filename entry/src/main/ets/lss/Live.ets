@@ -5,9 +5,9 @@ import { VHLivePlayer, VHLivePlayerView, VHPlayerStatus, VHDefinition, VHWaterMa
   VHErrorCode,
   VHPlayerError,
   VHPlayerPipStatus,
+  VHPlayerPipControlPanelStatus,
   VHCastPlayMediaSource,
-  VHCastPlayDevice,
-  VHPlayerPipControlPanelStatus
+  VHCastPlayDevice
 } from '@vhall/vhallyun-lss-vod'
 import { promptAction, router, window } from '@kit.ArkUI';
 import StyleConstants from '../common/constants/StyleConstants';
@@ -20,33 +20,44 @@ import image from '@ohos.multimedia.image';
 import {
   VHDocFilType,
   VHDocument,
+  VHDocumentPageModel,
   VHDocumentView,
   VHDocumentViewModel,
   VHDocumentWaterMark
 } from '@vhall/vhallyun-doc';
 import { AVCastPicker, AVCastPickerState } from '@kit.AVSessionKit';
 import { TaskManager } from '../common/utils/TaskUitl';
-import { VHIM } from '@vhall/vhallyun-ims';
+import { VHIM, VHIMInterface } from '@vhall/vhallyun-ims';
 
+import bundleManager from '@ohos.bundle.bundleManager';
+import { cryptoFramework } from '@kit.CryptoArchitectureKit';
+import { buffer } from '@kit.ArkTS';
+import { VHAppInfo, VHMessage } from '@vhall/vhallyun-framework';
 
+@Builder
+export function LiveBuilder(name: string, param: object) {
+  Live({ lss_id: param['lss_id'], access_token: param['access_token'], user_id: param['userid'], channel_id: param['channel_id']})
+}
 @Entry
 @Component
 struct Live {
+  imConnectTimer: number = -1;
   livePlayerModel: VHLivePlayer = new VHLivePlayer(getContext(this));
   @State photoAccessHelper: photoAccessHelper.PhotoAccessHelper | undefined = undefined; // 相册模块管理实例
   @State livePlayCreate: boolean = false;
   // 获取上个界面传递过来的房间号
   params: object = router.getParams() as object;
-  public lss_id: string = this.params['lss_id'];
-  public access_token: string = this.params['access_token'];
-  public channel_id: string = this.params['channel_id'];
-  public user_id:string = this.params['userid'];
+  public lss_id: string = '';//this.params['lss_id'];
+  public access_token: string = '';//this.params['access_token'];
+  public channel_id: string ='';// this.params['channel_id'];
+  public user_id:string = '';//this.params['userid'];
   private isFirstShow: boolean = true;
   @State isCasting :boolean = false;
   /**
    * 页面退到后台前获取播放状态，用于回到前台进行播放判断。
    * **/
   private playState: VHPlayerStatus = VHPlayerStatus.INIT;
+  pageInfos: NavPathStack = new NavPathStack() // 导航
   //文档水印参数
   private docWaterMark: VHDocumentWaterMark = new VHDocumentWaterMark('hello world', 20);
   //判断视频显示音频控件
@@ -79,19 +90,58 @@ struct Live {
   @State showDoc: boolean = true;
   private logReport:object = [];
   private source: VHCastPlayMediaSource |undefined = undefined;
+
+
+  public static uint8ArrayToHexStr(data: Uint8Array): string {
+    let hexString = '';
+    let i: number;
+    for (i = 0; i < data.length; i++) {
+      let char = ('00' + data[i].toString(16)).slice(-2);
+      hexString += char;
+    }
+    console.info('Uint8Array转十六进制:' + hexString);
+    return hexString;
+  }
+
+
+  public static async getVersionName(): Promise<string> {
+    try {
+      let bundleInfo = await bundleManager.getBundleInfoForSelf(bundleManager.BundleFlag.GET_BUNDLE_INFO_WITH_APPLICATION| bundleManager.BundleFlag.GET_BUNDLE_INFO_WITH_SIGNATURE_INFO);
+      let sign = bundleInfo.signatureInfo;
+      let cer = sign.certificate?.toString();
+      let certBody = cer?.replace('-----BEGIN CERTIFICATE-----', '').replace('-----END CERTIFICATE-----', '').replace(/\s+/g, ''); // 移除所有空白字符
+      let md = cryptoFramework.createMd('MD5');
+      // 数据量较少时，可以只做一次update，将数据全部传入，接口未对入参长度做限制。
+      await md?.update({ data: new Uint8Array(buffer.from(sign.fingerprint, 'utf-8').buffer) });
+      let mdResult = await md.digest();
+      let hexString = '';
+      let i: number = 0;
+      for (i = 0; i < mdResult.data.length; i++) {
+        let char = ('00' + mdResult.data[i].toString(16)).slice(-2);
+        hexString += char;
+      }
+      return hexString;
+    } catch (error) {
+
+    }
+    return "";
+  }
+
   aboutToAppear(): void {
     this.source = {
       title:'我的回放',
       name:'微吼直播',
       description:'当前播放为回放视频',
-      headImage:"https://q3.itc.cn/q_70/images03/20250328/eb685be206974653af5acbff051bd9f3.jpeg"
+      headImage:"https://gimg2.baidu.com/image_search/src=http%3A%2F%2Fsafe-img.xhscdn.com%2Fbw1%2F2eb3e4c4-d619-4657-90c6-a535c40f8096%3FimageView2%2F2%2Fw%2F1080%2Fformat%2Fjpg&refer=http%3A%2F%2Fsafe-img.xhscdn.com&app=2002&size=f9999,10000&q=a80&n=0&g=0n&fmt=auto?sec=1755311692&t=f5126cbadc7bae9845f367c33ea72fa2"
     };
     this.livePlayerModel.initCastPlay(this.source);
     this.livePlayerModel.setVHLivePlayerInterface(this);
     this.initScalingMode();
+    // this.document.setVHDocInterface(this);
     //初始化直播文档，进行消息监听
     this.imBase.init(this.channel_id, this.access_token);
-    this.document.initLiveDoc(this.lss_id, this.channel_id, this.access_token, true,this);
+    this.imBase.setVHIMInterface(this)
+    this.document.initLiveDoc(this.lss_id, this.channel_id, this.access_token, true,this)
     let context = getContext(this);
     window.getLastWindow(context)
       .then((window) => {
@@ -109,7 +159,11 @@ struct Live {
     let jsonString = JSON.stringify(data);
     this.logReport['report_extra'] = jsonString;
     this.logReport['sz_t'] = 1;
+    VHAppInfo.getInstance().report_extra = jsonString;
+    let t = Live.getVersionName();
   }
+
+
 
   aboutToDisappear(): void {
     this.imBase.closeMsg();
@@ -122,6 +176,45 @@ struct Live {
     }
 
   }
+
+    imSDKReceiveChatMessage (im: VHIM, message: VHMessage): void {
+      throw new Error('Function not implemented.');
+    }
+    imSDKReceiveOnlineMessage (im: VHIM, message: VHMessage): void {
+      throw new Error('Function not implemented.');
+    }
+    imSDKReceiveCustomMessage (im: VHIM, message: VHMessage): void  {
+      throw new Error('Function not implemented.');
+    }
+    imSDKReceiveRoomMessage (im: VHIM, message: VHMessage): void  {
+      throw new Error('Function not implemented.');
+    }
+    imSDKError (im: VHIM, code: number, errorMsg: string): void {
+      throw new Error('Function not implemented.');
+    }
+    onNetworkConnect (): void  {
+      console.log("onNetworkConnect","onNetworkConnect")
+    }
+    onNetworkDisconnect (code: number, message: string): void  {
+      if (this.imConnectTimer != -1) {
+        return;
+      }
+      //启用定时器进行重连。
+      this.imConnectTimer = setTimeout(() => {
+        //重连只需要重新调用join方法
+        this.imBase.init(this.channel_id, this.access_token);
+        this.imConnectTimer = -1;
+      }, 3000);
+    }
+    onNetworkConnecting (): void {
+      throw new Error('Function not implemented.');
+    }
+    imSDKForbidden (im: VHIM, forbidden: boolean): void  {
+      throw new Error('Function not implemented.');
+    }
+    imSDKForbiddenAll (im: VHIM, forbiddenAll: boolean): void {
+      throw new Error('Function not implemented.');
+    }
 
   // 页面初次加载的时候
   onPageShow(): void {
@@ -182,7 +275,7 @@ struct Live {
    * 翻页消息
    * @param documentView   文档id 为空时没有 文档
    */
-  docChangePage(docViewModel: VHDocumentViewModel): void {
+  docChangePage(docViewModel: VHDocumentPageModel): void {
 
   }
 
@@ -286,6 +379,14 @@ struct Live {
     this.documentViews.push(doc);
   }
 
+  /**
+   * @description 文档加载完成
+   * @param documentView   文档id 为空时没有 文档
+   */
+  docViewLoadEnd(doc: VHDocument){
+
+  }
+
   removeDocumentItem(cid: string) {
     for (let index = 0; index < this.documentViews.length; index++) {
       const element = this.documentViews[index];
@@ -368,7 +469,10 @@ struct Live {
    * 画中画状态
    */
   onPipStatusChange(state: VHPlayerPipStatus) {
-
+    if (state == VHPlayerPipStatus.STOP) {
+      this.livePlayerModel.destroyPlayer()
+      this.livePlayerModel.setPlayerScalingMode(VHPlayerScalingMode.ASPECT_FILL)
+    }
   }
 
   onPlayerVolume(volume: number) {
@@ -458,12 +562,15 @@ struct Live {
     });
   }
 
+
+
   onStatusDidChange(state: VHPlayerStatus) {
     if (state == VHPlayerStatus.PLAYING) {
       promptAction.showToast({
         duration: StyleConstants.PLAY_ERROR_TIME,
         message: '开始播放'
       });
+      this.livePlayerModel.setPlayerScalingMode(VHPlayerScalingMode.ASPECT_FILL)
     } else if (state == VHPlayerStatus.PAUSE) {
       promptAction.showToast({
         duration: StyleConstants.PLAY_ERROR_TIME,
@@ -493,6 +600,8 @@ struct Live {
         duration: StyleConstants.PLAY_ERROR_TIME,
         message: '视频加载中'
       });
+    }else if(state == VHPlayerStatus.PREPARED){
+      this.livePlayerModel.initPipController(true,'');
     }
   }
 
@@ -610,7 +719,7 @@ struct Live {
         this.livePlayerModel.stopPlay();
       })
       Button($r('app.string.start_play')).onClick(() => {
-       this.livePlayerModel.startPlay(this.lss_id, this.access_token,VHDefinition.ORIGIN);
+        this.livePlayerModel.startPlay(this.lss_id, this.access_token,VHDefinition.ORIGIN);
       })
     }
 
@@ -759,6 +868,12 @@ struct Live {
 
   @Builder
   documentViewBuilder() {
+    Button("还原").onClick((event: ClickEvent) => {
+      for (let index = 0; index < this.documentViews.length; index++) {
+        const element = this.documentViews[index] as VHDocument;
+        element.zoomReset()
+      }
+    })
     Tabs({ barPosition: BarPosition.Start, controller: this.controller }) {
       ForEach(this.documentViews, (doc: VHDocument, index: number) => {
         TabContent() {
@@ -795,78 +910,87 @@ struct Live {
     // .opacity(this.showDoc == true ? 100 : 0)//通过设置透明度来显示和隐藏
     .animationDuration(0)
     .backgroundColor('#ffd7ecb3')
-    .height('30%')
+    .height('60%')
     .scrollable(false)
   }
 
   build() {
-    Column({ space: StyleConstants.COLUMN_SPACE }) {
-      Navigation().title(this.NavigationTitle).width(StyleConstants.FULL_HEIGHT).height('5%')
-      Column() {
-        Stack({ alignContent: Alignment.TopEnd }) {
-          // 播放器容器
-          VHLivePlayerView({ componentListener: this, livePlayer: this.livePlayerModel })
-            .width(StyleConstants.FULL_WIDTH)
-            .height(this.playLandSpaceMode ? StyleConstants.FULL_HEIGHT : StyleConstants.VH_PLAYER_NORMAL_HEIGHT)
-            .backgroundColor(Color.Black)
-            .align(Alignment.Center)
-            .zIndex(1)
+    NavDestination(){
+      Column({ space: StyleConstants.COLUMN_SPACE }) {
+        Navigation().title(this.NavigationTitle).width(StyleConstants.FULL_HEIGHT).height('5%')
+        Column() {
+          Stack({ alignContent: Alignment.TopEnd }) {
+            // 播放器容器
+            VHLivePlayerView({ componentListener: this, livePlayer: this.livePlayerModel})
+              .width(StyleConstants.FULL_WIDTH)
+              .height(this.playLandSpaceMode ? StyleConstants.FULL_HEIGHT : StyleConstants.VH_PLAYER_NORMAL_HEIGHT)
+              .backgroundColor(Color.Black)
+              .align(Alignment.Center)
+              .zIndex(1)
 
-          Row(){
-            Button($r('app.string.player_landspace')).onClick(() => {
-              let windowStage: window.WindowStage = AppStorage.get('windowStage') as window.WindowStage;
-              windowStage.getMainWindowSync().setPreferredOrientation(window.Orientation.LANDSCAPE);
-              this.playLandSpaceMode = true;
-            })
-            Button($r('app.string.play_portrait')).onClick(() => {
-              let windowStage: window.WindowStage = AppStorage.get('windowStage') as window.WindowStage;
-              windowStage.getMainWindowSync().setPreferredOrientation(window.Orientation.PORTRAIT);
-              this.playLandSpaceMode = false;
-            })
-            AVCastPicker({
-              customPicker: (): void => this.componentBuilder(),
-              normalColor: Color.Black,
-              onStateChange: this.onStateChange
-            })
-              .width('40vp')
-              .height('40vp')
-          }.align(Alignment.TopEnd)
-          .zIndex(2)
+            Row(){
+              Button($r('app.string.player_landspace')).onClick(() => {
+                let windowStage: window.WindowStage = AppStorage.get('windowStage') as window.WindowStage;
+                windowStage.getMainWindowSync().setPreferredOrientation(window.Orientation.LANDSCAPE);
+                this.playLandSpaceMode = true;
+              })
+              Button($r('app.string.play_portrait')).onClick(() => {
+                let windowStage: window.WindowStage = AppStorage.get('windowStage') as window.WindowStage;
+                windowStage.getMainWindowSync().setPreferredOrientation(window.Orientation.PORTRAIT);
+                this.playLandSpaceMode = false;
+              })
+              AVCastPicker({
+                customPicker: (): void => this.componentBuilder(),
+                normalColor: Color.Black,
+                onStateChange: this.onStateChange
+              })
+                .width('40vp')
+                .height('40vp')
+            }.align(Alignment.TopEnd)
+            .zIndex(2)
 
-          Column() {
-            Row() {
-              Button("停止投屏")
-                .fontColor(Color.White)
-                .backgroundColor('#333333')
-                .onClick(() => {
-                  this.livePlayerModel.StopCastPlay();
-                })
-                .margin({
-                  left: '12vp',
-                  right: '12vp'
-                })
+            Column() {
+              Row() {
+                Button("停止投屏")
+                  .fontColor(Color.White)
+                  .backgroundColor('#333333')
+                  .onClick(() => {
+                    this.livePlayerModel.StopCastPlay();
+                  })
+                  .margin({
+                    left: '12vp',
+                    right: '12vp'
+                  })
+              }
+              .justifyContent(FlexAlign.Center)
+              .width('50%')
+              .zIndex(this.isCasting ? 3 : 0)
             }
             .justifyContent(FlexAlign.Center)
-            .width('100%')
+            .backgroundColor(Color.Black)
+            .width(StyleConstants.FULL_WIDTH)
+            .height(this.playLandSpaceMode ? StyleConstants.FULL_HEIGHT : StyleConstants.VH_PLAYER_NORMAL_HEIGHT)
             .zIndex(this.isCasting ? 3 : 0)
           }
-          .justifyContent(FlexAlign.Center)
-          .backgroundColor(Color.Black)
-          .width(StyleConstants.FULL_WIDTH)
-          .height(this.playLandSpaceMode ? StyleConstants.FULL_HEIGHT : StyleConstants.VH_PLAYER_NORMAL_HEIGHT)
-          .zIndex(this.isCasting ? 3 : 0)
+          Stack(){
+
+          }
+          // this.documentViewBuilder();
+          this.VHLivePlayCtl();
         }
-        this.documentViewBuilder();
-        this.VHLivePlayCtl();
       }
-    }
-    .alignItems(HorizontalAlign.Center)
-    .height(StyleConstants.FULL_HEIGHT)
-    .padding({
-      top: 0,
-      left: 8,
-      bottom: 0,
-      right: 8
-    })
+      .alignItems(HorizontalAlign.Center)
+      .height(StyleConstants.FULL_HEIGHT)
+      .padding({
+        top: 0,
+        left: 8,
+        bottom: 0,
+        right: 8
+      })
+    }.onReady((context: NavDestinationContext) => {
+      this.pageInfos = context.pathStack
+    }).hideBackButton(true)
+    .id('VHLiveWatch')
+
   }
 }
