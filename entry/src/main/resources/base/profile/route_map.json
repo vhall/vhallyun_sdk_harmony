@@ -1,0 +1,34 @@
+{
+  "routerMap": [
+    {
+      "name": "Chat",
+      "pageSourceFile": "src/main/ets/im/Chat.ets",
+      "buildFunction": "ChatBuilder"
+    },
+    {
+      "name": "Vod",
+      "pageSourceFile": "src/main/ets/vod/Vod.ets",
+      "buildFunction": "VodBuilder"
+    },
+    {
+      "name": "Live",
+      "pageSourceFile": "src/main/ets/lss/Live.ets",
+      "buildFunction": "LiveBuilder"
+    },
+    {
+      "name": "RTC",
+      "pageSourceFile": "src/main/ets/rtc/RTC.ets",
+      "buildFunction": "RTCBuilder"
+    },
+    {
+      "name": "LivePusher",
+      "pageSourceFile": "src/main/ets/pusher/livePusher.ets",
+      "buildFunction": "LivePusherBuilder"
+    },
+    {
+      "name": "ShortVideo",
+      "pageSourceFile": "src/main/ets/short_video/ShortVideo.ets",
+      "buildFunction": "ShortVideoBuilder"
+    }
+  ]
+}
